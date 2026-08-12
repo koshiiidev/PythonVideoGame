@@ -9,19 +9,24 @@ pygame.display.set_caption("Zelda Tico")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 24)
 
+#region Colores
 BLANCO = (255, 255, 255)
 AZUL = (0, 100, 200)
+NEGRO = (0, 0, 0)
+#endregion
+
 
 # Tamano original del sprite
 SPRITE_W, SPRITE_H = 421, 354
 ESCALA = 3
 DISP_W = SPRITE_W // ESCALA
 DISP_H = SPRITE_H // ESCALA
+TILE_SIZE = 50
 
 # Cargar spritesheets
-sheet_frente = pygame.image.load('assets/sprites/camina_frente_spritesheet.png').convert_alpha()
-sheet_espalda = pygame.image.load('assets/sprites/camina_espalda_spritesheet.png').convert_alpha()
-sheet_derecha = pygame.image.load('assets/sprites/camina_derecha_spritesheet.png').convert_alpha()
+sheet_frente = pygame.image.load('assets/characters/player/camina_frente_spritesheet.png').convert_alpha()
+sheet_espalda = pygame.image.load('assets/characters/player/camina_espalda_spritesheet.png').convert_alpha()
+sheet_derecha = pygame.image.load('assets/characters/player/camina_derecha_spritesheet.png').convert_alpha()
 
 # Extraer frames de cada spritesheet
 def carga_animacion(sheet, n_frames):
@@ -42,6 +47,14 @@ frames = {
     'derecha': carga_animacion(sheet_derecha, 5),
     'izquierda': voltear(carga_animacion(sheet_derecha, 5)),
 }
+
+#region Tiles
+
+def dibujar_grid():
+    for x in range(30):
+        pygame.draw.line(pantalla, NEGRO, (x*60, 0), (x*60, HEIGHT))
+        pygame.draw.line(pantalla, NEGRO, (0, x * 60), (WIDTH, x * 60 ))
+#endregion
 
 # Jugador
 jugador = {
@@ -132,6 +145,7 @@ while running:
 
     # Dibujar
     pantalla.fill(BLANCO)
+    dibujar_grid()
 
     # Sprite
     current_frames = frames[jugador['direccion']]
