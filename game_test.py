@@ -28,8 +28,16 @@ sheet_espalda = pygame.image.load('assets/characters/player/J1_E_sp.png').conver
 sheet_derecha = pygame.image.load('assets/characters/player/J1_D_sp.png').convert_alpha()
 sheet_izquierda = pygame.image.load('assets/characters/player/J1_I_sp.png').convert_alpha()
 sheet_ataque_frente = pygame.image.load('assets/characters/player/J1_F_ataque_sp.png').convert_alpha()
+sheet_ataque_espalda = pygame.image.load('assets/characters/player/J1_E_ataque_sp.png').convert_alpha()
+sheet_ataque_derecha = pygame.image.load('assets/characters/player/J1_D_ataque_sp.png').convert_alpha()
+sheet_ataque_izquierda = pygame.image.load('assets/characters/player/J1_I_ataque_sp.png').convert_alpha()
 
-ataque_frames = [sheet_ataque_frente.subsurface((i * JUG_W, 0, JUG_W, JUG_H)) for i in range(5)]
+ataque_frames = {
+    'frente': [sheet_ataque_frente.subsurface((i * JUG_W, 0, JUG_W, JUG_H)) for i in range(5)],
+    'espalda': [sheet_ataque_espalda.subsurface((i * JUG_W, 0, JUG_W, JUG_H)) for i in range(5)],
+    'derecha': [sheet_ataque_derecha.subsurface((i * JUG_W, 0, JUG_W, JUG_H)) for i in range(5)],
+    'izquierda': [sheet_ataque_izquierda.subsurface((i * JUG_W, 0, JUG_W, JUG_H)) for i in range(5)]
+}
 
 def carga_frames(sheet, n):
     return [sheet.subsurface((i * JUG_W, 0, JUG_W, JUG_H)) for i in range(n)]
@@ -165,7 +173,8 @@ while running:
 
     # Jugador
     if jugador['atacando']:
-        pantalla.blit(ataque_frames[ataque_frame_idx], (jugador['x'], jugador['y']))
+        dir_ataque = jugador['direccion'] if jugador['direccion'] in ataque_frames else 'frente'
+        pantalla.blit(ataque_frames[dir_ataque][ataque_frame_idx], (jugador['x'], jugador['y']))
     else:
         pantalla.blit(jugador_frames[jugador['direccion']][jugador_frame_idx], (jugador['x'], jugador['y']))
     pygame.draw.rect(pantalla, AZUL, (jugador['x'], jugador['y'], JUG_W, JUG_H), 3)
