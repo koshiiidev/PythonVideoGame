@@ -1,0 +1,6 @@
+Música de fondo. Formatos: .ogg (recomendado) o .mp3
+
+Se reproduce con:  audio.musica('nombre.ogg')
+
+Cada escena decide su pista. Si el archivo no existe, el juego avisa por
+consola y sigue corriendo sin música.
