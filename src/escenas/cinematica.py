@@ -1,28 +1,50 @@
 """
 Se pasa sola cuando se acaba el tiempo o a mano con Enter/Espacio. Escape saltea toda la cinemática
 
-una nueva es armar una lista como INTRO.
 """
 
 import pygame
 
 from config import settings as ajustes
-from src.core import assets_manager as assets
-from src.core.scene_manager import Escena
+from src.core import recursos
+from src.core.gestor_escenas import Escena
 
 
 #region Guiones
 # texto: lo que se muestra. Se parte en varias líneas con \n
 # duracion: segundos en pantalla, contando los fundidos
 # imagen: ruta opcional a un PNG de fondo
+# La intro planta el problema, no lo resuelve: el final se guarda para FINAL
 INTRO = [
-    {'texto': 'Hace mucho tiempo, en una costa lejana...', 'duracion': 4.0},
-    {'texto': 'la Cangreja guardaba la calma del pueblo.', 'duracion': 4.0},
-    {'texto': 'Hasta que una noche, el mar se quedó en silencio.', 'duracion': 4.5},
+    {'texto': 'Hace muchos años, un pueblo vivía en armonía\n'
+              'entre cafetales, montañas y tradiciones.', 'duracion': 5.0},
+    {'texto': 'Una noche, la niebla bajó de la montaña,\n'
+              'y con ella llegó la oscuridad.', 'duracion': 5.0},
+    {'texto': 'Los cafetales se marchitaron.\n'
+              'Los caminos se perdieron.\n'
+              'Nadie volvió a ver el sol.', 'duracion': 5.0},
+    {'texto': 'Solo uno se atrevió a subir a buscar la luz:\n'
+              'Cholito, un joven campesino del valle.', 'duracion': 5.0},
 ]
 
+# Se muestra al sellar a la bruja. Cierra con el mensaje del juego.
 FINAL = [
-    {'texto': 'Y así, la calma volvió a la costa.', 'duracion': 4.0},
+    {'texto': 'La bruja no fue destruida.\n'
+              'Primero fue escuchada. Después, sellada.', 'duracion': 5.0},
+    {'texto': 'En la montaña que hoy llaman La Cangreja\n'
+              'duerme su rencor, y ya no baja al valle.', 'duracion': 5.0},
+    {'texto': 'La niebla se abrió.\n'
+              'El café volvió a florecer.', 'duracion': 4.5},
+    {'texto': '"El valor no siempre es destruir al mal,\n'
+              'sino hacer lo necesario para que nunca más regrese."', 'duracion': 6.0},
+]
+
+CREDITOS = [
+    {'texto': 'CHOLITO\nLa Leyenda de la Cangreja', 'duracion': 4.5},
+    {'texto': 'Inspirado en leyendas costarricenses:\n'
+              'La Segua, El Cadejos y el cerro La Cangreja.', 'duracion': 5.0},
+    {'texto': 'Proyecto final del curso\nDesarrollo de Aplicaciones\nUAM', 'duracion': 4.5},
+    {'texto': 'Gracias por jugar.', 'duracion': 3.5},
 ]
 #endregion
 
@@ -92,7 +114,7 @@ class EscenaCinematica(Escena):
         alpha = self._alpha(placa)
 
         if placa.get('imagen'):
-            img = assets.imagen(placa['imagen'], (ajustes.ANCHO, ajustes.ALTO))
+            img = recursos.imagen(placa['imagen'], (ajustes.ANCHO, ajustes.ALTO))
             if img:
                 img = img.copy()
                 img.set_alpha(alpha)
