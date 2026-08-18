@@ -1,0 +1,6 @@
+Efectos de sonido. Formatos: .wav (recomendado) o .ogg
+
+Se reproducen con:  audio.sfx('nombre.wav')
+
+Conviene .wav porque se cargan enteros en memoria y suenan sin retardo.
+Sugeridos: espada.wav, paso.wav, cofre.wav, menu_mover.wav, menu_ok.wav

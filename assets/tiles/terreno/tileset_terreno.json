@@ -1,0 +1,105 @@
+{
+  "tile_size": 64,
+  "bitmask": {
+    "N": 1,
+    "E": 2,
+    "S": 4,
+    "W": 8
+  },
+  "nota": "El bit indica hacia donde CONTINUA el terreno. Cada tile es autocontenido.",
+  "terrenos": {
+    "pasto": {
+      "tipo": "variantes",
+      "tiles": [
+        "pasto_base",
+        "pasto_var1",
+        "pasto_var2",
+        "pasto_var3",
+        "pasto_var4",
+        "pasto_var5"
+      ]
+    },
+    "camino": {
+      "tipo": "bitmask16",
+      "tiles": {
+        "0": "camino_00_aislado",
+        "1": "camino_01_fin_S",
+        "2": "camino_02_fin_W",
+        "3": "camino_03_curva_NE",
+        "4": "camino_04_fin_N",
+        "5": "camino_05_recto_V",
+        "6": "camino_06_curva_SE",
+        "7": "camino_07_T_E",
+        "8": "camino_08_fin_E",
+        "9": "camino_09_curva_NW",
+        "10": "camino_10_recto_H",
+        "11": "camino_11_T_N",
+        "12": "camino_12_curva_SW",
+        "13": "camino_13_T_W",
+        "14": "camino_14_T_S",
+        "15": "camino_15_cruce"
+      }
+    },
+    "tierra": {
+      "tipo": "bitmask16",
+      "tiles": {
+        "0": "tierra_00_aislado",
+        "1": "tierra_01_fin_S",
+        "2": "tierra_02_fin_W",
+        "3": "tierra_03_curva_NE",
+        "4": "tierra_04_fin_N",
+        "5": "tierra_05_recto_V",
+        "6": "tierra_06_curva_SE",
+        "7": "tierra_07_T_E",
+        "8": "tierra_08_fin_E",
+        "9": "tierra_09_curva_NW",
+        "10": "tierra_10_recto_H",
+        "11": "tierra_11_T_N",
+        "12": "tierra_12_curva_SW",
+        "13": "tierra_13_T_W",
+        "14": "tierra_14_T_S",
+        "15": "tierra_15_cruce"
+      }
+    },
+    "agua": {
+      "tipo": "bitmask16+esquinas",
+      "tiles": {
+        "0": "agua_00_charco",
+        "1": "agua_01_punta_S",
+        "2": "agua_02_punta_W",
+        "3": "agua_03_esq_NE",
+        "4": "agua_04_punta_N",
+        "5": "agua_05_canal_V",
+        "6": "agua_06_esq_SE",
+        "7": "agua_07_orilla_W",
+        "8": "agua_08_punta_E",
+        "9": "agua_09_esq_NW",
+        "10": "agua_10_canal_H",
+        "11": "agua_11_orilla_S",
+        "12": "agua_12_esq_SW",
+        "13": "agua_13_orilla_E",
+        "14": "agua_14_orilla_N",
+        "15": "agua_15_interior"
+      },
+      "esquinas_internas": {
+        "NW": "agua_esq_int_NW",
+        "NE": "agua_esq_int_NE",
+        "SE": "agua_esq_int_SE",
+        "SW": "agua_esq_int_SW"
+      },
+      "uso_esquinas": "Se dibujan ENCIMA del tile 15 (interior) cuando la diagonal correspondiente no es agua. Son transparentes, se pueden apilar las 4 en el mismo tile."
+    }
+  },
+  "atlas": {
+    "archivo": "tileset_terreno.png",
+    "columnas": 16,
+    "filas": 5,
+    "fila_por_terreno": {
+      "pasto": 0,
+      "camino": 1,
+      "tierra": 2,
+      "agua": 3,
+      "agua_esquinas_internas": 4
+    }
+  }
+}
