@@ -1,13 +1,10 @@
 """
-Constantes del juego. Todo lo que se ajusta, en un solo lugar.
-
-Las rutas son relativas a la raíz del proyecto: main.py hace os.chdir hacia
-allí al arrancar, así que funcionan igual desde la terminal que desde el IDE.
+constantes del juego, las rutas son relativas a la raiz
 """
 
 #region Ventana
 ANCHO, ALTO = 800, 600
-TITULO = "Zelda Tico - La Leyenda de la Cangreja"
+TITULO = "Cholito - La leyenda del valle"
 FPS = 60
 #endregion
 
@@ -53,9 +50,58 @@ DIR_TERRENO = 'assets/tiles/terreno'
 DIR_JUGADOR = 'assets/characters/player'
 DIR_NPC = 'assets/characters/npc'
 DIR_TILES = 'assets/tiles'
+DIR_ICONOS = 'assets/ui/iconos'
+DIR_RETRATOS = 'assets/ui/retratos'
 DIR_MUSICA = 'assets/audio/musica'
 DIR_SFX = 'assets/audio/sfx'
 PAQUETE_NIVELES = 'niveles'
+#endregion
+
+#region Partida
+DIFICULTADES = {
+    'Principiante': {'enemigos': 3, 'velocidad': 60,  'dano': 1, 'multiplicador': 1.0},
+    'Normal':       {'enemigos': 5, 'velocidad': 85,  'dano': 1, 'multiplicador': 1.5},
+    'Leyenda':      {'enemigos': 8, 'velocidad': 115, 'dano': 1, 'multiplicador': 2.5},
+}
+DIFICULTAD_POR_DEFECTO = 'Normal'
+
+VIDAS_OPCIONES = (1, 3, 5)
+VIDAS_POR_DEFECTO = 3
+
+# Iconos que puede elegir cada jugador
+# Retratos de Cholito. Es siempre el mismo personaje: solo cambia el color del
+# panuelo, para distinguir jugadores en el marcador
+ICONOS_JUGADOR = ('cholito_rojo.png', 'cholito_azul.png', 'cholito_verde.png',
+                  'cholito_amarillo.png', 'cholito_morado.png', 'cholito_blanco.png')
+
+LARGO_MAX_NOMBRE = 12
+NOMBRE_POR_DEFECTO = 'Cholito'
+
+# Puntos
+PUNTOS_POR_ENEMIGO = 100
+ENEMIGOS_PARA_BONO = 10
+PUNTOS_BONO = 500
+VELOCIDAD_POR_BONO = 12       # los enemigos se aceleran con cada bono
+#endregion
+
+#region Combate y enemigos
+ENEMIGO_LADO = 48
+CUADROS_ENEMIGO = 4
+FPS_ENEMIGO = 6
+ENEMIGO_HITBOX_ANCHO = 0.55   # proporciones de su caja de pies
+ENEMIGO_HITBOX_ALTO = 0.35
+DIR_ENEMIGOS = 'assets/characters/enemigos'
+
+DISTANCIA_VISION = 220        # a que distancia el enemigo empieza a perseguir
+DISTANCIA_APARICION = 260     # no aparecen mas cerca que esto del jugador
+ALCANCE_ATAQUE = 52           # largo del machetazo en pixeles
+ANCHO_ATAQUE = 46             # ancho del machetazo
+INVULNERABLE_S = 1.2          # tiempo sin recibir dano tras un golpe
+PARPADEO_HZ = 8               # velocidad del parpadeo mientras es invulnerable
+#endregion
+
+#region Archivos
+ARCHIVO_ESTADISTICAS = 'datos/estadisticas.json'
 #endregion
 
 #region Niveles

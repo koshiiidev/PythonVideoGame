@@ -4,13 +4,18 @@ El juego en si
 Se carga el nivel por nombre y se puede cambiar la escena en caliente
 """
 
+import math
+import random
 import pygame
 
 from config import settings as ajustes
-from src.core import assets_manager as assets
-from src.core import niveles
+from src.core import recursos
+from src.core import cargador_niveles
+from src.core import geometria
 from src.core.autotile import Terreno
-from src.core.scene_manager import Escena
+from src.core.enemigo import Enemigo
+from src.core.gestor_escenas import Escena
+from src.escenas.hud import Hud
 
 
 class EscenaJuego(Escena):
@@ -28,6 +33,8 @@ class EscenaJuego(Escena):
         self.terreno = Terreno(ajustes.DIR_TERRENO, escala=ajustes.TILE_W)
         self.jugador_frames = self._cargar_animaciones('%s_sp.png')
         self.ataque_frames = self._cargar_animaciones('%s_ataque_sp.png')
+        self.sprites_enemigo = self._cargar_enemigos()
+        self.hud = Hud()
         #endregion
 
         #region Estado de la partida
@@ -54,6 +61,15 @@ class EscenaJuego(Escena):
         self.tile_previo = None
         #endregion
 
+        #region Combate
+        self.enemigos = []
+        self.t_invulnerable = 0.0     # mientras sea > 0 no recibe dano
+        self.hacia_el_bono = 0        # eliminados desde el ultimo bono
+        self.velocidad_extra = 0.0    # sube con cada bono (requisito 9)
+        self.aviso = ''
+        self.t_aviso = 0.0
+        #endregion
+
     #region Carga
     def _cargar_animaciones(self, patron):
         codigos = {'frente': 'J1_F', 'espalda': 'J1_E',
@@ -61,17 +77,28 @@ class EscenaJuego(Escena):
         frames = {}
         for nombre, codigo in codigos.items():
             ruta = '%s/%s' % (ajustes.DIR_JUGADOR, patron % codigo)
-            frames[nombre] = assets.spritesheet(
+            frames[nombre] = recursos.spritesheet(
                 ruta, ajustes.FRAMES_ANIM,
                 (ajustes.JUG_W, ajustes.JUG_H), ajustes.TILE_ORIG_W)
         return frames
+
+    def _cargar_enemigos(self):
+        #Un spritesheet por tipo, cortado igual que el del jugador
+        hojas = {}
+        for tipo in ('sombra', 'segua', 'cadejos'):
+            hojas[tipo] = recursos.spritesheet(
+                '%s/%s.png' % (ajustes.DIR_ENEMIGOS, tipo),
+                ajustes.CUADROS_ENEMIGO,
+                (ajustes.ENEMIGO_LADO, ajustes.ENEMIGO_LADO),
+                ajustes.ENEMIGO_LADO)
+        return hojas
 
     def entrar(self):
         self.cargar_nivel(self.estado.nivel_actual, self.estado.entrada)
 
     def cargar_nivel(self, nombre, entrada=None):
         #carga o cambia de mapa, entrada es (columna, fila) en tiles o None
-        self.nivel = niveles.cargar(nombre)
+        self.nivel = cargador_niveles.cargar(nombre)
         self.estado.nivel_actual = nombre
 
         # Sprites de objetos: dependen del nivel, porque cada uno usa caracteres diferentes
@@ -79,14 +106,14 @@ class EscenaJuego(Escena):
         for caracter, ruta in self.nivel.objetos.items():
             tam = ((ajustes.ARBOL_W, ajustes.ARBOL_H) if caracter == 'A' # si es un arbol usa el tamaño del arbol
                    else (ajustes.TILE_W, ajustes.TILE_H)) # si no usa el tamaño del tile
-            img = assets.imagen(ruta, tam) # carga la imagen
+            img = recursos.imagen(ruta, tam) # carga la imagen
             if img: # si la imagen se cargo correctamente
                 self.objeto_images[caracter] = img # se agrega al diccionario de objetos
 
         # NPCs: las posiciones vienen en tiles y aqui se pasan a pixeles
         self.npcs = []
         for datos in self.nivel.npcs: # por cada npc en el nivel
-            img = assets.imagen('%s/%s' % (ajustes.DIR_NPC, datos['sprite']),
+            img = recursos.imagen('%s/%s' % (ajustes.DIR_NPC, datos['sprite']),
                                 (ajustes.JUG_W, ajustes.JUG_H)) # carga la imagen
             if not img: 
                 continue # si la imagen no se cargo correctamente se salta el npc
@@ -99,6 +126,8 @@ class EscenaJuego(Escena):
 
         self._ubicar_jugador(entrada)
         self._cache_rejilla.clear()
+        self.enemigos = []
+        self.poblar_enemigos()
 
         if self.audio and self.nivel.musica:
             self.audio.musica(self.nivel.musica)
@@ -134,11 +163,7 @@ class EscenaJuego(Escena):
     #region Hitbox y colision
     def hitbox_pies(self, pos_x, pos_y):
         #solo los pies para que el personaje se vea frente a los objetos
-        ancho = int(ajustes.JUG_W * ajustes.HITBOX_ANCHO) 
-        alto = int(ajustes.JUG_H * ajustes.HITBOX_ALTO)
-        off_x = (ajustes.JUG_W - ancho) // 2
-        off_y = ajustes.JUG_H - alto - 2
-        return pygame.Rect(pos_x + off_x, pos_y + off_y, ancho, alto)
+        return geometria.caja_pies_jugador(pos_x, pos_y)
 
     def hitbox_tile(self, caracter, col, fil):
         tw, th = ajustes.TILE_W, ajustes.TILE_H
@@ -172,14 +197,10 @@ class EscenaJuego(Escena):
         return False
 
     def colisiona_con_npcs(self, rect_pies):
-        ancho = int(ajustes.JUG_W * ajustes.HITBOX_ANCHO)
-        alto = int(ajustes.JUG_H * ajustes.HITBOX_ALTO)
-        off_x = (ajustes.JUG_W - ancho) // 2
-        off_y = ajustes.JUG_H - alto - 2
         for npc in self.npcs:
             if npc.get('solido', False):
-                r = pygame.Rect(npc['x'] + off_x, npc['y'] + off_y, ancho, alto)
-                if rect_pies.colliderect(r):
+                if rect_pies.colliderect(
+                        geometria.caja_pies_jugador(npc['x'], npc['y'])):
                     return True
         return False
     #endregion
@@ -187,8 +208,10 @@ class EscenaJuego(Escena):
     #region Eventos
     def manejar_evento(self, evento):
         if evento.type == pygame.KEYDOWN:
-            if evento.key == pygame.K_ESCAPE:
-                self.gestor.desapilar()
+            if evento.key in (pygame.K_ESCAPE, pygame.K_p):
+                # Se apila: la partida queda congelada debajo, sin perder nada
+                from src.escenas.pausa import EscenaPausa
+                self.gestor.apilar(EscenaPausa(self.gestor, self))
             elif evento.key in (pygame.K_UP, pygame.K_w):
                 self.teclas['up'] = True
             elif evento.key in (pygame.K_DOWN, pygame.K_s):
@@ -205,6 +228,7 @@ class EscenaJuego(Escena):
                 self.t_ataque = 0.0
                 self.ataque_listo = False
                 self.jugador['atacando'] = True
+                self.atacar()
                 if self.audio:
                     self.audio.sfx('espada.wav') #todavia no esta este audio
 
@@ -219,12 +243,141 @@ class EscenaJuego(Escena):
                 self.teclas['right'] = False
     #endregion
 
+
+    #region Enemigos y combate
+    def tiles_libres(self):
+        #Casillas donde un enemigo puede aparecer sin quedar dentro de una pared
+        libres = []
+        for fil in range(self.nivel.filas):
+            for col in range(self.nivel.cols):
+                if not self.nivel.es_solido(col, fil) and not self.nivel.salida_en(col, fil):
+                    libres.append((col, fil))
+        return libres
+
+    def poblar_enemigos(self):
+        #Mantiene la cantidad de enemigos de la dificultad
+        objetivo = self.estado.ajuste_dificultad['enemigos']
+        vivos = [e for e in self.enemigos if e.vivo]
+        self.enemigos = vivos
+        intentos = 0
+        while len(self.enemigos) < objetivo and intentos < 60:
+            intentos += 1
+            if self.aparecer_enemigo():
+                continue
+
+    def aparecer_enemigo(self):
+        #Aparece uno nuevo lejos del jugador
+        libres = self.tiles_libres()
+        if not libres:
+            return False
+        col, fil = random.choice(libres)
+        x = col * ajustes.TILE_W + (ajustes.TILE_W - ajustes.ENEMIGO_LADO) // 2
+        # La base del enemigo se apoya en el piso del tile igual que el jugador
+        #si no sus hitbox nunca se tocan
+        y = fil * ajustes.TILE_H + ajustes.TILE_H - ajustes.ENEMIGO_LADO
+        if math.hypot(x - self.jugador['x'], y - self.jugador['y']) < ajustes.DISTANCIA_APARICION:
+            return False
+        ajuste = self.estado.ajuste_dificultad
+        self.enemigos.append(Enemigo(
+            x, y, self.nivel.enemigo,
+            velocidad=ajuste['velocidad'] + self.velocidad_extra,
+            dano=ajuste['dano'],
+            puntos=int(ajustes.PUNTOS_POR_ENEMIGO * ajuste['multiplicador'])))
+        return True
+
+    def actualizar_enemigos(self, dt):
+        objetivo = (self.jugador['x'], self.jugador['y'])
+        for enemigo in self.enemigos:
+            enemigo.actualizar(dt, objetivo, self.colisiona_con_mapa)
+            if self.t_invulnerable <= 0 and enemigo.toca(self.hitbox_pies(
+                    self.jugador['x'], self.jugador['y'])):
+                self.recibir_dano(enemigo.dano)
+        self.poblar_enemigos()
+
+    def rect_ataque(self):
+        #Caja del machetazo delante del jugador segun su direccion
+        largo, ancho = ajustes.ALCANCE_ATAQUE, ajustes.ANCHO_ATAQUE
+        cx = self.jugador['x'] + ajustes.JUG_W // 2
+        cy = self.jugador['y'] + ajustes.JUG_H // 2
+        direccion = self.jugador['direccion']
+        if direccion == 'espalda':
+            return pygame.Rect(cx - ancho // 2, cy - largo, ancho, largo)
+        if direccion == 'frente':
+            return pygame.Rect(cx - ancho // 2, cy, ancho, largo)
+        if direccion == 'izquierda':
+            return pygame.Rect(cx - largo, cy - ancho // 2, largo, ancho)
+        return pygame.Rect(cx, cy - ancho // 2, largo, ancho)
+
+    def atacar(self):
+        #Resuelve el machetazo contra todos los enemigos alcanzados
+        caja = self.rect_ataque()
+        jugador = self.estado.jugador
+        for enemigo in self.enemigos:
+            if enemigo.vivo and enemigo.rect.colliderect(caja):
+                if enemigo.recibir_golpe(1) and jugador:
+                    jugador.registrar_eliminacion(enemigo.puntos)
+                    self.revisar_bono()
+                    if self.audio:
+                        self.audio.sfx('enemigo.wav')
+
+    def revisar_bono(self):
+        #Cada cierta cantidad de eliminados puntos extra y enemigos mas rapidos
+        self.hacia_el_bono += 1
+        if self.hacia_el_bono < ajustes.ENEMIGOS_PARA_BONO:
+            return
+        self.hacia_el_bono = 0
+        self.velocidad_extra += ajustes.VELOCIDAD_POR_BONO
+        for enemigo in self.enemigos:
+            enemigo.velocidad += ajustes.VELOCIDAD_POR_BONO
+        if self.estado.jugador:
+            self.estado.jugador.sumar_puntos(ajustes.PUNTOS_BONO)
+        self.mostrar_aviso('¡BONO! +%d  ·  la niebla se agita' % ajustes.PUNTOS_BONO)
+        if self.audio:
+            self.audio.sfx('bono.wav')
+
+    def recibir_dano(self, dano=1):
+        #Quita una vida, da unos segundos de invulnerabilidad y aleja al jugador
+        jugador = self.estado.jugador
+        if jugador is None or self.t_invulnerable > 0:
+            return
+        self.t_invulnerable = ajustes.INVULNERABLE_S
+        sin_vidas = jugador.perder_vida()
+        if self.audio:
+            self.audio.sfx('dano.wav')
+        if sin_vidas:
+            self.terminar_partida()
+        else:
+            self.mostrar_aviso('Perdiste una vida')
+            self._ubicar_jugador(self.nivel.inicio)
+            self.enemigos = []
+            self.poblar_enemigos()
+
+    def terminar_partida(self):
+        from src.escenas.resultados import EscenaResultados
+        self.gestor.cambiar(EscenaResultados(self.gestor, victoria=False))
+
+    def mostrar_aviso(self, texto, segundos=2.0):
+        self.aviso = texto
+        self.t_aviso = segundos
+    #endregion
+
     #region Actualizacion
     def actualizar(self, dt):
         self.mover(dt)
         self.revisar_salida()
+        self.actualizar_enemigos(dt)
         self.actualizar_camara()
         self.animar(dt)
+        self._contar_tiempo(dt)
+        if self.t_aviso > 0:
+            self.t_aviso = max(0.0, self.t_aviso - dt)
+
+    def _contar_tiempo(self, dt):
+        #El tiempo jugado es parte del resumen final
+        if self.estado.jugador:
+            self.estado.jugador.sumar_tiempo(dt)
+        if self.t_invulnerable > 0:
+            self.t_invulnerable = max(0.0, self.t_invulnerable - dt)
 
     def mover(self, dt):
         j = self.jugador
@@ -299,6 +452,14 @@ class EscenaJuego(Escena):
         self.dibujar_terreno(pantalla, rango)
         self.dibujar_ordenados(pantalla, rango)
         self.dibujar_rejilla(pantalla, rango)
+        if ajustes.MOSTRAR_DEPURACION and self.jugador['atacando']:
+            caja = self.rect_ataque()
+            pygame.draw.rect(pantalla, (255, 240, 120),
+                             (caja.x - self.camera['x'], caja.y - self.camera['y'],
+                              caja.width, caja.height), 1)
+        self.hud.dibujar(pantalla, self.estado.jugador)
+        if self.t_aviso > 0 and self.aviso:
+            self.hud.aviso(pantalla, self.aviso)
         self.dibujar_info(pantalla)
 
     def rango_visible(self):
@@ -346,13 +507,32 @@ class EscenaJuego(Escena):
             frames = self.jugador_frames[self.jugador['direccion']]
             sprite = frames[min(self.frame_idx, len(frames) - 1)]
 
+        #mientras es invulnerable parpadea
+        parpadeo = (self.t_invulnerable > 0 and int(self.t_invulnerable * ajustes.PARPADEO_HZ) % 2 == 0)
+
         elementos.append({
             'tipo': 'jugador',
+            'oculto': parpadeo,
             'y_sort': self.jugador['y'] + ajustes.JUG_H,
             'x': self.jugador['x'] - camara['x'],
             'y': self.jugador['y'] - camara['y'],
             'sprite': sprite,
         })
+
+        for enemigo in self.enemigos:
+            if not enemigo.vivo:
+                continue
+            cuadros = self.sprites_enemigo.get(enemigo.tipo) or []
+            if not cuadros:
+                continue
+            elementos.append({
+                'tipo': 'enemigo',
+                'y_sort': enemigo.y_sort,
+                'x': enemigo.x - camara['x'],
+                'y': enemigo.y - camara['y'],
+                'sprite': cuadros[enemigo.cuadro % len(cuadros)],
+                'ref': enemigo,
+            })
 
         for npc in self.npcs:
             elementos.append({
@@ -383,7 +563,8 @@ class EscenaJuego(Escena):
 
         #dibujamos todo
         for e in elementos:
-            pantalla.blit(e['sprite'], (e['x'], e['y']))
+            if not e.get('oculto'):
+                pantalla.blit(e['sprite'], (e['x'], e['y']))
             if ajustes.MOSTRAR_DEPURACION:
                 self.dibujar_hitbox(pantalla, e)
 
@@ -398,11 +579,12 @@ class EscenaJuego(Escena):
                              (hb.x - camara['x'], hb.y - camara['y'], hb.width, hb.height), 1)
         elif elemento['tipo'] == 'npc':
             if elemento['ref'].get('solido', False):
-                ancho = int(ajustes.JUG_W * ajustes.HITBOX_ANCHO)
-                alto = int(ajustes.JUG_H * ajustes.HITBOX_ALTO)
-                pygame.draw.rect(pantalla, ajustes.HITBOX_NPC,
-                                 (elemento['x'] + (ajustes.JUG_W - ancho) // 2,
-                                  elemento['y'] + ajustes.JUG_H - alto - 2, ancho, alto), 1)
+                hb = geometria.caja_pies_jugador(elemento['x'], elemento['y'])
+                pygame.draw.rect(pantalla, ajustes.HITBOX_NPC, hb, 1)
+        elif elemento['tipo'] == 'enemigo':
+            hb = elemento['ref'].hitbox
+            pygame.draw.rect(pantalla, (220, 90, 200),
+                             (hb.x - camara['x'], hb.y - camara['y'], hb.width, hb.height), 1)
         elif elemento['tipo'] == 'tile':
             col, fil = elemento['celda']
             hb = self.hitbox_tile(elemento['caracter'], col, fil)

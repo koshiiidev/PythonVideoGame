@@ -1,7 +1,6 @@
 """
 Arranque del juego.
 
-Cadena de escenas:  cinemática de intro  ->  menú  ->  partida
 """
 
 import os
@@ -13,8 +12,8 @@ import pygame
 
 from config import settings as ajustes
 from src.core.audio import Audio
-from src.core.game_state import EstadoJuego
-from src.core.scene_manager import GestorEscenas
+from src.core.estado import EstadoJuego
+from src.core.gestor_escenas import GestorEscenas
 
 
 def crear_gestor():

@@ -1,0 +1,20 @@
+{
+  "record_global": 12000,
+  "record_nombre": "Cholito",
+  "partidas": [
+    {
+      "fecha": "17/08/2026 23:31",
+      "dificultad": "Normal",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "npc_F_1.png",
+        "vidas_perdidas": 5,
+        "vidas_restantes": 0,
+        "eliminados": 60,
+        "puntos": 12000,
+        "record_por_vida": 8650,
+        "tiempo": 399.9
+      }
+    }
+  ]
+}
