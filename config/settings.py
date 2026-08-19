@@ -8,6 +8,13 @@ TITULO = "Cholito - La leyenda del valle"
 FPS = 60
 #endregion
 
+#region Pasto
+# Cada cuanto una celda de pasto usa una variante en vez del tile base.
+# 0.0 = siempre el mismo. Sirve para que el zacate no se vea como un patron
+# repetido. Los niveles que declaran su propio SUELO no se ven afectados.
+PROB_VARIANTE_PASTO = 0.35
+#endregion
+
 #region Rejilla y sprites
 TILE_W, TILE_H = 64, 64
 TILE_ORIG_W, TILE_ORIG_H = 100, 100   # tamaño algunos spritesheets que toca escalar
@@ -40,6 +47,7 @@ BLANCO = (255, 255, 255)
 NEGRO = (0, 0, 0)
 GRIS = (120, 120, 120)
 COLOR_REJILLA = (220, 220, 220)
+COLOR_FUERA_MAPA = (18, 20, 16)       # relleno cuando el mapa no llena la pantalla
 HITBOX_JUGADOR = (255, 0, 0)
 HITBOX_NPC = (0, 200, 0)
 HITBOX_TILE = (0, 100, 200)

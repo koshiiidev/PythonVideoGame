@@ -17,6 +17,8 @@ Leyenda del mapa
     1 2 3 4  casas del pueblo      5  la casona, es la unica en la que se entra
     K  chinamo   Z  pozo   Y  carreta   N  banca   F  farol
     P  puerta (no bloquea: es la salida)
+
+Ademas de MAPA hay una capa DECOR con lo que se para encima del suelo.
 """
 
 TITULO = 'Pueblo del Valle'
@@ -44,6 +46,44 @@ MAPA = [
     "A.....5....AT.##.T..MMM.MMM..A",
     "A.R...P#############.........A",
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+]
+
+# ----------------------------------------------------------------------------
+# CAPA DE ENCIMA (opcional)
+# ----------------------------------------------------------------------------
+# MAPA es el suelo y lo que ocupa la casilla entera. DECOR es lo que se PARA
+# sobre ese suelo. El hueco es el ESPACIO ' ', no el punto.
+#
+# Son dos capas porque una casilla guarda una sola letra. Con una sola capa,
+# poner un barril en el camino borraba el camino y quedaba pasto debajo. Aca
+# el camino se dibuja primero y el barril encima.
+#
+# Usa las mismas tablas que MAPA: OBJETOS para el sprite, SOLIDOS para saber si
+# estorba, PROFUNDIDAD para pasarle por detras. Lo unico que NO va aca son los
+# terrenos autotileados ni los objetos con HUELLA de varias casillas.
+DECOR = [
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "     O   J       a    O  R    ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
+    "                              ",
 ]
 
 # Terrenos que se acomodan solos segun sus vecinos: caracter -> nombre del set de 16 tiles.
