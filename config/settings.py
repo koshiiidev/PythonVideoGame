@@ -132,12 +132,70 @@ INVULNERABLE_S = 1.2          # tiempo sin recibir daño tras un golpe
 PARPADEO_HZ = 8               # velocidad del parpadeo mientras es invulnerable
 #endregion
 
+#region hitboxes
+# Igual que los personajes chocan solo con los pies, los objetos chocan solo con
+# la parte que de verdad toca el suelo. Un arbol no estorba con las hojas,
+# estorba con el tronco.
+#
+#   caracter -> (ancho, alto)             como PROPORCION del tile
+#   caracter -> (ancho, alto, anclaje)    si hay que pegarla a otro lado
+#
+# (1.0, 1.0) es la casilla entera. Se puede pasar de 1.0 cuando el objeto se
+# dibuja mas ancho que su casilla, como la banca o la carreta.
+#
+# EL ANCLAJE dice a que parte de la casilla se pega la caja. Si no se escribe,
+# es 'abajo' apoyada en el piso y centrada a lo ancho
+# Se arma con estas palabras, solas o unidas con guion
+#
+#       arriba   centro   abajo          (eje vertical)
+#       izquierda  centro  derecha       (eje horizontal)
+#
+#   'abajo'            apoyada abajo, centrada a lo ancho
+#   'centro'           en el medio de la casilla, los dos ejes
+#   'izquierda'        pegada a la izquierda, apoyada abajo
+#   'arriba-derecha'   en la esquina de arriba a la derecha
+#
+# Esta tabla es la convencion de letras del proyecto y sirve de valor por
+# defecto cada nivel puede reescribir lo que quiera con su propio COLISIONES.
+COLISION_POR_DEFECTO = (1.0, 1.0)   # lo que no aparezca aqui bloquea entero
+COLISIONES = {
+    # Terreno: bloquea la casilla completa, no tendria sentido a medias
+    '~': (1.00, 1.00),   # agua
+    'M': (0.70, 0.85),   # muro
+    'V': (0.70, 0.85),   # cerca: se apoya en la mitad de abajo del tile
+
+    # Vegetacion: solo el tronco o la mata
+    'A': (0.45, 0.83),   # arbol comun
+    'a': (0.45, 0.50, 'centro'),   # arbol frutal
+    'q': (0.40, 0.30, 'centro'),   # arbol seco
+    'p': (0.35, 0.20),   # palmera
+    'C': (0.55, 0.55),   # cafetal
+    # El tronco esta tirado cruzando la casilla, no apoyado en el borde de
+    # abajo: su caja va en el medio
+    'T': (0.90, 0.40, 'centro'),
+    'R': (0.90, 0.80),   # piedra
+
+    # Trastos
+    'O': (0.50, 0.30),   # barril
+    'J': (0.45, 0.28),   # tinaja
+    'N': (1.30, 0.30),   # banca, se dibuja mas ancha que su tile
+    'F': (0.25, 0.15),   # farol: solo el pie de hierro
+    'Z': (1.20, 0.55),   # pozo
+    'K': (1.20, 0.50),   # chinamo
+    'Y': (1.20, 0.45),   # carreta
+}
+#endregion
+
 #region Archivos
+
 ARCHIVO_ESTADISTICAS = 'datos/estadisticas.json'
+
 #endregion
 
 #region Niveles
+
 NIVEL_INICIAL = 'pueblo'
+
 #endregion
 
 #region Audio

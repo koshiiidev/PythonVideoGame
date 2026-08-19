@@ -91,6 +91,14 @@ class Enemigo(object):
         return geometria.caja_pies(x, y, self.lado, self.prop_ancho, self.prop_alto)
 
     @property
+    def centro(self):
+        """
+        Centro de la caja de pies: el punto que la criatura ocupa en el suelo
+        Es lo que hay que usar para perseguir y para calcular empujones
+        """
+        return self.hitbox.center
+
+    @property
     def y_sort(self):
         return self.y + self.lado
 
@@ -140,9 +148,10 @@ class Enemigo(object):
     def _direccion(self, dt, objetivo): #si ve al jugador lo persigue si no deambula
         #Persigue si ve al jugador si no deambula
         if objetivo:
-            ox, oy = objetivo #Posicion del jugador
-            dx = ox - self.x #Diferencia entre jugador y enemigo en x
-            dy = oy - self.y #Diferencia entre jugador y enemigo en y
+            ox, oy = objetivo #Centro de la caja de pies del jugador
+            cx, cy = self.centro #El suyo, no la esquina del sprite
+            dx = ox - cx #Diferencia entre jugador y enemigo en x
+            dy = oy - cy #Diferencia entre jugador y enemigo en y
             distancia = math.hypot(dx, dy) #Distancia entre jugador y enemigo, sacando la hipotenusa
             if 0 < distancia <= ajustes.DISTANCIA_VISION: #Si la distancia es menor o igual a la vision
                 return dx / distancia, dy / distancia #Retorna la direccion del enemigo en modo tupla
@@ -188,8 +197,9 @@ class Enemigo(object):
     def empujar(self, desde=None):
         #Lo lanza en direccion contraria a "desde" y lo deja aturdido
         if desde:
-            dx = self.x - desde[0]
-            dy = self.y - desde[1]
+            cx, cy = self.centro
+            dx = cx - desde[0]
+            dy = cy - desde[1]
             distancia = math.hypot(dx, dy)
             self._empuje = (dx / distancia, dy / distancia) if distancia else (0.0, 1.0)
         else:

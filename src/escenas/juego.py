@@ -21,16 +21,22 @@ from src.escenas.hud import Hud
 
 class EscenaJuego(Escena):
 
-    def __init__(self, gestor):
+    def __init__(self, gestor, paseo=False):
         Escena.__init__(self, gestor)
         self.estado = gestor.estado
         self.audio = gestor.audio
+
+        # MODO PASEO: sirve para revisar un mapa sin jugarlo
+        self.paseo = bool(paseo)
 
         self.font = pygame.font.SysFont(None, 24)
         self.font_rejilla = pygame.font.SysFont(None, 16)
         self._cache_rejilla = {}
 
         #region Assets
+        # Carga TODOS los terrenos de assets/tiles/terreno. Camino, tierra,
+        # agua, cerca y muro entran por el mismo camino: cada uno es una
+        # carpeta con sus 16 tiles
         self.terreno = Terreno(ajustes.DIR_TERRENO, escala=ajustes.TILE_W)
         self.jugador_frames = self._cargar_animaciones('%s_sp.png')
         self.ataque_frames = self._cargar_animaciones('%s_ataque_sp.png')
@@ -99,8 +105,9 @@ class EscenaJuego(Escena):
             self.suelo = suelo.imagen
 
         # Objetos que ocupan mas de un tile se cargan aparte porque hay que respetarles la proporcion. Se guardan ya escalados
-        self.objeto_images = {}
-        self.objeto_grandes = {}
+        self.objeto_images = {}       # caracter -> Animacion del tamano de un tile
+        self.objeto_grandes = {}      # caracter -> imagen ya escalada, mas grande que el tile
+        self.objeto_profundos = set() # caracteres que se ordenan por profundidad
         for caracter, ruta in self.nivel.objetos.items():
             escala = self.nivel.altos.get(caracter)
             if escala:
@@ -110,10 +117,15 @@ class EscenaJuego(Escena):
                     alto = int(ancho * img.get_height() / float(img.get_width()))
                     self.objeto_grandes[caracter] = pygame.transform.scale(
                         img, (ancho, alto))
+                # Si se desborda de su casilla hay que ordenarlo si o si, o
+                # taparia al jugador estando el jugador mas adelante
+                self.objeto_profundos.add(caracter)
                 continue
             anim = Animacion(ruta, lado=ajustes.TILE_W, fps=ajustes.FPS_OBJETO)
-            if anim.cuadros:
+            if anim.frames:
                 self.objeto_images[caracter] = anim
+        # Y los que miden un tile pero el nivel pide ordenar igual (los arboles)
+        self.objeto_profundos |= set(self.nivel.profundidad)
 
         # NPCs: las posiciones vienen en tiles y aqui se pasan a pixeles
         self.npcs = []
@@ -173,35 +185,27 @@ class EscenaJuego(Escena):
         #solo los pies para que el personaje se vea frente a los objetos
         return geometria.caja_pies_jugador(pos_x, pos_y)
 
-    def hitbox_tile(self, caracter, col, fil):
-        tw, th = ajustes.TILE_W, ajustes.TILE_H
-        base = pygame.Rect(col * tw, fil * th, tw, th)
+    def centro_jugador(self):
+        #Centro de la caja de pies, es el punto que persiguen los enemigos
+        return self.hitbox_pies(self.jugador['x'], self.jugador['y']).center
 
-        if caracter in self.nivel.altos:
-            # Los altos sobresalen del tile, asi que su caja es un poco menor
-            ancho = int(tw * 0.8)
-            alto = int(th * 0.9)
-            return pygame.Rect(col * tw + (tw - ancho) // 2,
-                               fil * th + (th - alto), ancho, alto)
-
-        if caracter == 'T':   # Tronco caido: solo la franja del medio
-            alto = int(th * 0.4)
-            return pygame.Rect(col * tw, fil * th + (th - alto) // 2, tw, alto)
-
-        return base           # Agua y pared el tile completo
+    def hitbox_tile(self, col, fil):
+        #la caja que bloquea en esa casilla
+        prop_ancho, prop_alto, anclaje = self.nivel.colision(col, fil)
+        return geometria.caja_celda(col, fil, prop_ancho, prop_alto, anclaje)
 
     def colisiona_con_mapa(self, rect_pies):
         tw, th = ajustes.TILE_W, ajustes.TILE_H
-        col_ini = int(max(0, rect_pies.left // tw))
-        col_fin = int(min(self.nivel.cols - 1, rect_pies.right // tw))
-        fil_ini = int(max(0, rect_pies.top // th))
-        fil_fin = int(min(self.nivel.filas - 1, rect_pies.bottom // th))
+        #revisa una casilla de mas en cada lado por si los objetos son mas anchos que su propia casilla
+        col_ini = int(max(0, rect_pies.left // tw - 1))
+        col_fin = int(min(self.nivel.cols - 1, rect_pies.right // tw + 1))
+        fil_ini = int(max(0, rect_pies.top // th - 1))
+        fil_fin = int(min(self.nivel.filas - 1, rect_pies.bottom // th + 1))
 
         for fil in range(fil_ini, fil_fin + 1):
             for col in range(col_ini, col_fin + 1):
                 if self.nivel.es_solido(col, fil):
-                    if rect_pies.colliderect(
-                            self.hitbox_tile(self.nivel.celda(col, fil), col, fil)):
+                    if rect_pies.colliderect(self.hitbox_tile(col, fil)):
                         return True
         return False
 
@@ -265,6 +269,9 @@ class EscenaJuego(Escena):
 
     def poblar_enemigos(self):
         #Mantiene la cantidad de enemigos de la dificultad
+        if self.paseo:              # si es modo paseo no carga enemigos
+            self.enemigos = []
+            return
         objetivo = self.estado.ajuste_dificultad['enemigos']
         vivos = [e for e in self.enemigos if e.vivo]
         self.enemigos = vivos
@@ -305,7 +312,7 @@ class EscenaJuego(Escena):
         return True
 
     def actualizar_enemigos(self, dt):
-        objetivo = (self.jugador['x'], self.jugador['y'])
+        objetivo = self.centro_jugador()
         for enemigo in self.enemigos:
             enemigo.actualizar(dt, objetivo, self.colisiona_con_mapa)
             if self.t_invulnerable <= 0 and enemigo.toca(self.hitbox_pies(
@@ -333,9 +340,8 @@ class EscenaJuego(Escena):
         jugador = self.estado.jugador
         for enemigo in self.enemigos:
             if enemigo.vivo and enemigo.rect.colliderect(caja):
-                # Se le pasa la posicion del jugador para saber hacia donde
-                # sale despedido
-                origen = (self.jugador['x'], self.jugador['y'])
+                # Se le pasa la posicion del jugador para saber hacia donde sale despedido
+                origen = self.centro_jugador()
                 if enemigo.recibir_golpe(1, desde=origen) and jugador:
                     jugador.registrar_eliminacion(enemigo.puntos)
                     if enemigo is self.jefe:
@@ -366,7 +372,7 @@ class EscenaJuego(Escena):
     def recibir_dano(self, dano=1):
         #Quita una vida, da unos segundos de invulnerabilidad y aleja al jugador
         jugador = self.estado.jugador
-        if jugador is None or self.t_invulnerable > 0:
+        if self.paseo or jugador is None or self.t_invulnerable > 0:
             return
         self.t_invulnerable = ajustes.INVULNERABLE_S
         sin_vidas = jugador.perder_vida()
@@ -417,7 +423,7 @@ class EscenaJuego(Escena):
         #Lo trae el nivel, con su vida y su velocidad propias. Aparece donde el
         #nivel diga; si no dice nada, en el centro del mapa
         ficha = self.nivel.jefe
-        if not ficha:
+        if not ficha or self.paseo: #si es modo paseo no carga jefe
             return
 
         tw, th = ajustes.TILE_W, ajustes.TILE_H
@@ -456,6 +462,8 @@ class EscenaJuego(Escena):
     def nivel_despejado(self):
         #Un nivel sin objetivo esta despejado desde el principio.
         #Si ademas tiene jefe, hay que vencerlo.
+        if self.paseo:              # paseando se puede cruzar cualquier puerta
+            return True
         if self.hay_jefe and not self.jefe_vencido:
             return False
         return self.eliminados_nivel >= self.nivel.objetivo
@@ -503,6 +511,15 @@ class EscenaJuego(Escena):
         self._contar_tiempo(dt)
         if self.t_aviso > 0:
             self.t_aviso = max(0.0, self.t_aviso - dt)
+
+    def sprite_objeto(self, caracter):
+        #El dibujo actual de un objeto, venga de una imagen escalada (ALTOS) o
+        #de una animacion del tamano del tile. Asi el resto del codigo no tiene
+        #que preguntar de cual de los dos se trata
+        if caracter in self.objeto_grandes:
+            return self.objeto_grandes[caracter]
+        animacion = self.objeto_images.get(caracter)
+        return animacion.imagen if animacion else None
 
     def animar_objetos(self, dt):
         for anim in self.objeto_images.values():
@@ -591,6 +608,7 @@ class EscenaJuego(Escena):
         self.dibujar_terreno(pantalla, rango)
         self.dibujar_ordenados(pantalla, rango)
         self.dibujar_rejilla(pantalla, rango)
+        self.dibujar_colisiones(pantalla, rango)
 
         if ajustes.MOSTRAR_DEPURACION and self.jugador['atacando']:
             caja = self.rect_ataque()
@@ -634,14 +652,20 @@ class EscenaJuego(Escena):
 
                 tipo_tile = self.nivel.terrenos.get(caracter)
                 if tipo_tile:
-                    bitmask = self.terreno.bitmask(self.nivel.mapa, col, fil, caracter)
+                    # "continuan" hace que una puerta no corte el muro
+                    sigue = self.nivel.continuan.get(caracter)
+                    bitmask = self.terreno.bitmask(self.nivel.mapa, col, fil,
+                                                   caracter, sigue)
                     pantalla.blit(self.terreno.tile(tipo_tile, bitmask), (px, py))
                     if tipo_tile == 'agua':
-                        for e in self.terreno.recodos(self.nivel.mapa, col, fil, caracter, bitmask):
+                        for e in self.terreno.recodos(self.nivel.mapa, col, fil,
+                                                      caracter, bitmask, sigue):
                             pantalla.blit(self.terreno.agua_esq[e], (px, py))
-                elif caracter in self.objeto_images and caracter not in self.nivel.altos:
+                elif (caracter in self.objeto_images
+                      and caracter not in self.objeto_profundos):
                     # .imagen sirve igual para un objeto quieto que para uno animado
-                    #Los objetos planos van aca, el árbol va por profundidad
+                    #Aca solo van los PLANOS: los que se ordenan por
+                    #profundidad se dibujan despues, con los personajes
                     pantalla.blit(self.objeto_images[caracter].imagen, (px, py))
 
     def dibujar_ordenados(self, pantalla, rango):
@@ -694,24 +718,27 @@ class EscenaJuego(Escena):
                 'ref': npc,
             })
 
-        # arboles miden 96 y el tile 64 entonces se ancla la base al borde inferior del tile y las hojas se salen arriba
-        # Los objetos grandes se apoyan por su base en el borde inferior de su
-        # celda y se desbordan hacia arriba, igual que un arbol
-        for caracter, sprite in self.objeto_grandes.items():
-            for fil in range(fil_ini, fil_fin + 1):
-                for col in range(col_ini, col_fin + 1):
-                    if self.nivel.celda(col, fil) != caracter:
-                        continue
-                    base = (fil + 1) * ajustes.TILE_H
-                    elementos.append({
-                        'tipo': 'tile',
-                        'y_sort': base,
-                        'x': col * ajustes.TILE_W + ajustes.TILE_W // 2 - sprite.get_width() // 2 - camara['x'],
-                        'y': base - sprite.get_height() - camara['y'],
-                        'sprite': sprite,
-                        'caracter': caracter,
-                        'celda': (col, fil),
-                    })
+        # Objetos ordenados por profundidad. Todos se apoyan por su BASE en el
+        # borde de abajo de su celda y se desbordan hacia arriba, como un arbol:
+        # asi el jugador pasa por delante o por detras segun donde esten sus pies
+        for fil in range(fil_ini, fil_fin + 1):
+            for col in range(col_ini, col_fin + 1):
+                caracter = self.nivel.celda(col, fil)
+                if caracter not in self.objeto_profundos:
+                    continue
+                sprite = self.sprite_objeto(caracter)
+                if sprite is None:
+                    continue
+                base = (fil + 1) * ajustes.TILE_H
+                elementos.append({
+                    'tipo': 'tile',
+                    'y_sort': base,
+                    'x': col * ajustes.TILE_W + ajustes.TILE_W // 2 - sprite.get_width() // 2 - camara['x'],
+                    'y': base - sprite.get_height() - camara['y'],
+                    'sprite': sprite,
+                    'caracter': caracter,
+                    'celda': (col, fil),
+                })
 
         elementos.sort(key=lambda e: e['y_sort'])
 
@@ -745,11 +772,22 @@ class EscenaJuego(Escena):
             hb = elemento['ref'].hitbox
             pygame.draw.rect(pantalla, (220, 90, 200),
                              (hb.x - camara['x'], hb.y - camara['y'], hb.width, hb.height), 1)
-        elif elemento['tipo'] == 'tile':
-            col, fil = elemento['celda']
-            hb = self.hitbox_tile(elemento['caracter'], col, fil)
-            pygame.draw.rect(pantalla, ajustes.HITBOX_TILE,
-                             (hb.x - camara['x'], hb.y - camara['y'], hb.width, hb.height), 1)
+        # Las cajas de los tiles se dibujan todas juntas en dibujar_colisiones
+
+    def dibujar_colisiones(self, pantalla, rango):
+        #Marca lo que estorba de verdad en cada casilla
+        if not (ajustes.MOSTRAR_DEPURACION):
+            return
+        col_ini, col_fin, fil_ini, fil_fin = rango
+        camara = self.camera
+        for fil in range(fil_ini, fil_fin + 1):
+            for col in range(col_ini, col_fin + 1):
+                if not self.nivel.es_solido(col, fil):
+                    continue
+                hb = self.hitbox_tile(col, fil)
+                pygame.draw.rect(pantalla, ajustes.HITBOX_TILE,
+                                 (hb.x - camara['x'], hb.y - camara['y'],
+                                  hb.width, hb.height), 1)
 
     def dibujar_rejilla(self, pantalla, rango):
         #Dibuja (columna, fila) sobre cada tile para identificarlos facil
