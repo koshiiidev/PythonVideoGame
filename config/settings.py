@@ -15,6 +15,7 @@ JUG_W, JUG_H = 64, 64
 ARBOL_ESCALA = 1.5                    # el árbol se dibuja más grande para que sobresalga un poco del tile
 ARBOL_W = int(TILE_W * ARBOL_ESCALA)
 ARBOL_H = int(TILE_H * ARBOL_ESCALA)
+FPS_OBJETO = 7                        # ritmo de los objetos animados
 #endregion
 
 #region Jugador
@@ -29,7 +30,9 @@ HITBOX_ALTO = 0.2
 #region Depuracion
 # Con esto en False no se dibujan hitboxes, no aparece la barra de info y la
 # tecla G para mostrar la rejilla deja de funcionar.
+
 MOSTRAR_DEPURACION = True
+
 #endregion
 
 #region Colores
@@ -69,10 +72,9 @@ VIDAS_OPCIONES = (1, 3, 5)
 VIDAS_POR_DEFECTO = 3
 
 # Iconos que puede elegir cada jugador
-# Retratos de Cholito. Es siempre el mismo personaje: solo cambia el color del
-# panuelo, para distinguir jugadores en el marcador
-ICONOS_JUGADOR = ('cholito_rojo.png', 'cholito_azul.png', 'cholito_verde.png',
-                  'cholito_amarillo.png', 'cholito_morado.png', 'cholito_blanco.png')
+# Retratos de Cholito. Es siempre el mismo personaje la expresion es la que cambia
+ICONOS_JUGADOR = ('cholito_1.png', 'cholito_2.png', 'cholito_3.png',
+                  'cholito_4.png', 'cholito_5.png', 'cholito_6.png')
 
 LARGO_MAX_NOMBRE = 12
 NOMBRE_POR_DEFECTO = 'Cholito'
@@ -92,11 +94,41 @@ ENEMIGO_HITBOX_ANCHO = 0.55   # proporciones de su caja de pies
 ENEMIGO_HITBOX_ALTO = 0.35
 DIR_ENEMIGOS = 'assets/characters/enemigos'
 
+# Catalogo de criaturas. Cada una declara su tamano en pantalla y sus hojas/spritesheets.
+# 'reposo' es obligatoria; 'dano' es opcional y si falta se usa el destello
+ENEMIGOS = {
+    'sombra': {
+        'lado': 48, 'fps': 6, 'pingpong': False,
+        'sprite': {'reposo': 'sombra.png'},
+    },
+    'segua': {
+        'lado': 48, 'fps': 7, 'pingpong': False,
+        'sprite': {'reposo': 'segua.png'},
+    },
+    'cadejos': {
+        'lado': 48, 'fps': 8, 'pingpong': False,
+        'sprite': {'reposo': 'cadejos.png'},
+    },
+    'bruja': {
+        'lado': 128, 'fps': 5, 'pingpong': True,
+        'hitbox_ancho': 0.42, 'hitbox_alto': 0.16,
+        'sprite': {'reposo': 'bruja_F_sp.png', 'dano': 'bruja_F_dano.png'},
+        'fps_dano': 14,
+    },
+}
+ENEMIGO_POR_DEFECTO = 'sombra'
+
 DISTANCIA_VISION = 220        # a que distancia el enemigo empieza a perseguir
 DISTANCIA_APARICION = 260     # no aparecen mas cerca que esto del jugador
-ALCANCE_ATAQUE = 52           # largo del machetazo en pixeles
+SEPARACION_ENEMIGOS = 110     # ni mas cerca que esto entre ellos
+ALCANCE_ATAQUE = 46           # largo del machetazo en pixeles
 ANCHO_ATAQUE = 46             # ancho del machetazo
-INVULNERABLE_S = 1.2          # tiempo sin recibir dano tras un golpe
+# Al recibir un machetazo el enemigo sale despedido y queda unos instantes aturdido
+RETROCESO_VELOCIDAD = 340     # que tan fuerte sale despedido
+RETROCESO_S = 0.14            # cuanto dura el empuje
+ATURDIMIENTO_S = 0.34         # cuanto queda quieto despues del empuje
+
+INVULNERABLE_S = 1.2          # tiempo sin recibir daño tras un golpe
 PARPADEO_HZ = 8               # velocidad del parpadeo mientras es invulnerable
 #endregion
 

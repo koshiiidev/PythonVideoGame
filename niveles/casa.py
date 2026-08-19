@@ -6,13 +6,15 @@ interior de la casa.
 TITULO = 'Casa'
 
 MAPA = [
-    "MMMMMMMMM",
-    "MFFFFFFFM",
-    "MFFFFFFFM",
-    "MFFFFFFFM",
-    "MFFFFFFFM",
-    "MFFFFFFFM",
-    "MMMMPMMMM",
+    "MMMMMMMMMMMMMMMMM",
+    "MFFFFFFFFFFFFFFFM",
+    "MFFFFFFFFFFFFFFFM",
+    "MFFFFFFFFFFFFFFFM",
+    "MFFFFFFFFFFFFFFFM",
+    "MFFFFFFFFFFFFFFFM",
+    "MFFFFFFFFFFFFFFFM",
+    "MFFFFFFFFFFFFFFFM",
+    "MMMMMMMMPMMMMMMMM",
 ]
 
 TERRENOS = {'#': 'camino', '~': 'agua', 'B': 'tierra'}
@@ -28,6 +30,8 @@ SOLIDOS = {'M', '~'}
 
 JUGADOR_INICIO = (4, 5)
 MUSICA = 'casa.ogg'
+OBJETIVO = 3
+ES_FINAL = False
 
 NPCS = [
     {'sprite': 'npc_F_6.png', 'x': 2, 'y': 2, 'solido': True},
@@ -35,5 +39,5 @@ NPCS = [
 
 # la puerta de abajo devuelve al pueblo
 SALIDAS = {
-    (4, 6): ('pueblo', 12, 6),
+    (9, 9): ('mazmorra', 12, 6),
 }

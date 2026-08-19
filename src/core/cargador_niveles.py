@@ -16,7 +16,6 @@ _cache = {}
 
 
 class Nivel(object):
-    """Envuelve el módulo de datos y le agrega el comportamiento."""
 
     def __init__(self, nombre, mod):
         self.nombre = nombre
@@ -31,18 +30,28 @@ class Nivel(object):
         self.inicio = getattr(mod, 'JUGADOR_INICIO', None)
         self.musica = getattr(mod, 'MUSICA', None)
         self.titulo = getattr(mod, 'TITULO', nombre)
-        # que criatura puebla este nivel
+        #que criatura puebla este nivel
         self.enemigo = getattr(mod, 'ENEMIGO', 'sombra')
+        # Tile que se pinta debajo de todo None = pasto.
+        self.suelo = getattr(mod, 'SUELO', None)
+        # Caracteres que se dibujan mas grandes que su tile: caracter -> cuantos tiles de ancho ocupa
+        self.altos = dict(getattr(mod, 'ALTOS', {}) or {})
+        # Jefe del nivel. Es un diccionario. None = nivel sin jefe.
+        self.jefe = getattr(mod, 'JEFE', None)
+        # cuantos hay que derrotar para despejar el nivel. 0 = ninguno
+        self.objetivo = int(getattr(mod, 'OBJETIVO', 0))
+        # el nivel que cierra la historia al despejarlo se gana el juego
+        self.es_final = bool(getattr(mod, 'ES_FINAL', False))
 
         self.filas = len(self.mapa)
         self.cols = max(len(f) for f in self.mapa)
 
     #region Consultas
     def celda(self, col, fil):
-        """Qué hay en esa celda. Fuera del mapa devuelve pasto"""
+        #Que hay en la celda, fuera del mapa devuelve pasto
         if 0 <= fil < self.filas and 0 <= col < len(self.mapa[fil]):
             return self.mapa[fil][col]
-        return '.'
+        return '.' #pasto o suelo base del nivel
 
     def es_solido(self, col, fil):
         return self.celda(col, fil) in self.solidos

@@ -4,3 +4,5 @@ __pycache__/
 .idea/
 .vscode/
 .DS_Store
+pruebas_partida.py
+pruebas_animacion.py
