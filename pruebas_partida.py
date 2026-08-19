@@ -26,6 +26,9 @@ from src.core import estadisticas
 from src.core.estado import EstadoJuego
 from src.core.jugador import Jugador
 
+ICONO = ajustes.ICONOS_JUGADOR[0]
+OTRO_ICONO = ajustes.ICONOS_JUGADOR[2]
+
 ok = fallos = 0
 
 
@@ -49,8 +52,8 @@ def limpiar():
 
 
 print('== Jugador: validaciones ==')
-for nombre, icono, caso in [('', 'cholito_rojo.png', 'nombre vacio'),
-                            ('   ', 'cholito_rojo.png', 'nombre en blanco'),
+for nombre, icono, caso in [('', ICONO, 'nombre vacio'),
+                            ('   ', ICONO, 'nombre en blanco'),
                             ('Ana', 'inexistente.png', 'icono inventado')]:
     try:
         Jugador(nombre, icono)
@@ -60,14 +63,14 @@ for nombre, icono, caso in [('', 'cholito_rojo.png', 'nombre vacio'),
 print('   nombre vacio, en blanco e icono invalido rechazados')
 
 try:
-    Jugador('Ana', 'cholito_rojo.png', 0)
+    Jugador('Ana', ICONO, 0)
     chk(False, 'acepto cero vidas')
 except ValueError:
     chk(True, '')
 print('   cero vidas rechazado')
 
 print('== Jugador: puntos, vidas y tramos ==')
-j = Jugador('Luis', 'cholito_rojo.png', 3)
+j = Jugador('Luis', ICONO, 3)
 for _ in range(4):
     j.registrar_eliminacion()
 chk(j.puntos == 400 and j.eliminados == 4, 'puntos o eliminados mal')
@@ -110,17 +113,17 @@ chk(e.ajuste_dificultad['enemigos'] == 8, 'ajuste de dificultad mal')
 print('   Leyenda ->', e.ajuste_dificultad)
 
 try:
-    e.configurar_jugador('  ', 'cholito_rojo.png')
+    e.configurar_jugador('  ', ICONO)
     chk(False, 'acepto nombre en blanco')
 except ValueError:
     chk(True, '')
 try:
-    e.configurar_jugador('EsteNombreEsDemasiadoLargo', 'cholito_rojo.png')
+    e.configurar_jugador('EsteNombreEsDemasiadoLargo', ICONO)
     chk(False, 'acepto nombre largo')
 except ValueError:
     chk(True, '')
-e.configurar_jugador('  Luis  ', 'cholito_verde.png')
-chk(e.nombre == 'Luis' and e.icono == 'cholito_verde.png', 'no guardo la configuracion')
+e.configurar_jugador('  Luis  ', OTRO_ICONO)
+chk(e.nombre == 'Luis' and e.icono == OTRO_ICONO, 'no guardo la configuracion')
 print('   configuracion guardada:', e.nombre, e.icono)
 
 print('== EstadoJuego: partida ==')

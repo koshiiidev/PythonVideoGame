@@ -1,5 +1,5 @@
 {
-  "record_global": 12000,
+  "record_global": 12750,
   "record_nombre": "Cholito",
   "partidas": [
     {
@@ -14,6 +14,118 @@
         "puntos": 12000,
         "record_por_vida": 8650,
         "tiempo": 399.9
+      }
+    },
+    {
+      "fecha": "18/08/2026 11:09",
+      "dificultad": "Principiante",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_2.png",
+        "vidas_perdidas": 1,
+        "vidas_restantes": 0,
+        "eliminados": 2,
+        "puntos": 200,
+        "record_por_vida": 200,
+        "tiempo": 30.2
+      }
+    },
+    {
+      "fecha": "18/08/2026 11:10",
+      "dificultad": "Principiante",
+      "jugador": {
+        "nombre": "Cholito2",
+        "icono": "cholito_5.png",
+        "vidas_perdidas": 1,
+        "vidas_restantes": 0,
+        "eliminados": 16,
+        "puntos": 2100,
+        "record_por_vida": 2100,
+        "tiempo": 52.1
+      }
+    },
+    {
+      "fecha": "18/08/2026 11:35",
+      "dificultad": "Leyenda",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_1.png",
+        "vidas_perdidas": 0,
+        "vidas_restantes": 5,
+        "eliminados": 10,
+        "puntos": 3000,
+        "record_por_vida": 3000,
+        "tiempo": 32.5
+      }
+    },
+    {
+      "fecha": "18/08/2026 15:20",
+      "dificultad": "Normal",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_1.png",
+        "vidas_perdidas": 2,
+        "vidas_restantes": 1,
+        "eliminados": 47,
+        "puntos": 9050,
+        "record_por_vida": 8150,
+        "tiempo": 712.8
+      }
+    },
+    {
+      "fecha": "18/08/2026 16:34",
+      "dificultad": "Leyenda",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_1.png",
+        "vidas_perdidas": 2,
+        "vidas_restantes": 3,
+        "eliminados": 12,
+        "puntos": 3500,
+        "record_por_vida": 2750,
+        "tiempo": 69.6
+      }
+    },
+    {
+      "fecha": "18/08/2026 16:50",
+      "dificultad": "Principiante",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_1.png",
+        "vidas_perdidas": 0,
+        "vidas_restantes": 5,
+        "eliminados": 10,
+        "puntos": 1500,
+        "record_por_vida": 1500,
+        "tiempo": 103.7
+      }
+    },
+    {
+      "fecha": "18/08/2026 17:03",
+      "dificultad": "Normal",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_1.png",
+        "vidas_perdidas": 0,
+        "vidas_restantes": 5,
+        "eliminados": 20,
+        "puntos": 4000,
+        "record_por_vida": 4000,
+        "tiempo": 57.7
+      }
+    },
+    {
+      "fecha": "18/08/2026 18:55",
+      "dificultad": "Normal",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_1.png",
+        "vidas_perdidas": 5,
+        "vidas_restantes": 0,
+        "eliminados": 36,
+        "puntos": 12750,
+        "record_por_vida": 9100,
+        "tiempo": 217.8
       }
     }
   ]

@@ -13,6 +13,7 @@ from src.core import recursos
 from src.core import cargador_niveles
 from src.core import geometria
 from src.core.autotile import Terreno
+from src.core.animacion import Animacion
 from src.core.enemigo import Enemigo
 from src.core.gestor_escenas import Escena
 from src.escenas.hud import Hud
@@ -33,7 +34,6 @@ class EscenaJuego(Escena):
         self.terreno = Terreno(ajustes.DIR_TERRENO, escala=ajustes.TILE_W)
         self.jugador_frames = self._cargar_animaciones('%s_sp.png')
         self.ataque_frames = self._cargar_animaciones('%s_ataque_sp.png')
-        self.sprites_enemigo = self._cargar_enemigos()
         self.hud = Hud()
         #endregion
 
@@ -63,11 +63,13 @@ class EscenaJuego(Escena):
 
         #region Combate
         self.enemigos = []
-        self.t_invulnerable = 0.0     # mientras sea > 0 no recibe dano
+        self.t_invulnerable = 0.0     # mientras sea > 0 no recibe daño
         self.hacia_el_bono = 0        # eliminados desde el ultimo bono
+        self.eliminados_nivel = 0     # cuenta para el objetivo del nivel actual
         self.velocidad_extra = 0.0    # sube con cada bono (requisito 9)
         self.aviso = ''
         self.t_aviso = 0.0
+        self.jefe = None              # el enemigo grande del nivel, si lo hay
         #endregion
 
     #region Carga
@@ -82,17 +84,6 @@ class EscenaJuego(Escena):
                 (ajustes.JUG_W, ajustes.JUG_H), ajustes.TILE_ORIG_W)
         return frames
 
-    def _cargar_enemigos(self):
-        #Un spritesheet por tipo, cortado igual que el del jugador
-        hojas = {}
-        for tipo in ('sombra', 'segua', 'cadejos'):
-            hojas[tipo] = recursos.spritesheet(
-                '%s/%s.png' % (ajustes.DIR_ENEMIGOS, tipo),
-                ajustes.CUADROS_ENEMIGO,
-                (ajustes.ENEMIGO_LADO, ajustes.ENEMIGO_LADO),
-                ajustes.ENEMIGO_LADO)
-        return hojas
-
     def entrar(self):
         self.cargar_nivel(self.estado.nivel_actual, self.estado.entrada)
 
@@ -101,14 +92,28 @@ class EscenaJuego(Escena):
         self.nivel = cargador_niveles.cargar(nombre)
         self.estado.nivel_actual = nombre
 
-        # Sprites de objetos: dependen del nivel, porque cada uno usa caracteres diferentes
+        # Suelo propio del nivel si lo declara
+        self.suelo = None
+        if self.nivel.suelo:
+            suelo = Animacion(self.nivel.suelo, lado=ajustes.TILE_W)
+            self.suelo = suelo.imagen
+
+        # Objetos que ocupan mas de un tile se cargan aparte porque hay que respetarles la proporcion. Se guardan ya escalados
         self.objeto_images = {}
+        self.objeto_grandes = {}
         for caracter, ruta in self.nivel.objetos.items():
-            tam = ((ajustes.ARBOL_W, ajustes.ARBOL_H) if caracter == 'A' # si es un arbol usa el tamaño del arbol
-                   else (ajustes.TILE_W, ajustes.TILE_H)) # si no usa el tamaño del tile
-            img = recursos.imagen(ruta, tam) # carga la imagen
-            if img: # si la imagen se cargo correctamente
-                self.objeto_images[caracter] = img # se agrega al diccionario de objetos
+            escala = self.nivel.altos.get(caracter)
+            if escala:
+                img = recursos.imagen(ruta)
+                if img:
+                    ancho = int(ajustes.TILE_W * escala)
+                    alto = int(ancho * img.get_height() / float(img.get_width()))
+                    self.objeto_grandes[caracter] = pygame.transform.scale(
+                        img, (ancho, alto))
+                continue
+            anim = Animacion(ruta, lado=ajustes.TILE_W, fps=ajustes.FPS_OBJETO)
+            if anim.cuadros:
+                self.objeto_images[caracter] = anim
 
         # NPCs: las posiciones vienen en tiles y aqui se pasan a pixeles
         self.npcs = []
@@ -127,7 +132,10 @@ class EscenaJuego(Escena):
         self._ubicar_jugador(entrada)
         self._cache_rejilla.clear()
         self.enemigos = []
+        self.eliminados_nivel = 0
+        self.jefe = None
         self.poblar_enemigos()
+        self.invocar_jefe()
 
         if self.audio and self.nivel.musica:
             self.audio.musica(self.nivel.musica)
@@ -169,13 +177,14 @@ class EscenaJuego(Escena):
         tw, th = ajustes.TILE_W, ajustes.TILE_H
         base = pygame.Rect(col * tw, fil * th, tw, th)
 
-        if caracter == 'A':   # Árbol solo el tronco para que el jugador pueda estar detras
-            ancho = int(tw * 0.7)
+        if caracter in self.nivel.altos:
+            # Los altos sobresalen del tile, asi que su caja es un poco menor
+            ancho = int(tw * 0.8)
             alto = int(th * 0.9)
             return pygame.Rect(col * tw + (tw - ancho) // 2,
                                fil * th + (th - alto), ancho, alto)
 
-        if caracter == 'T':   # Tronco solo la franja del medio
+        if caracter == 'T':   # Tronco caido: solo la franja del medio
             alto = int(th * 0.4)
             return pygame.Rect(col * tw, fil * th + (th - alto) // 2, tw, alto)
 
@@ -259,6 +268,9 @@ class EscenaJuego(Escena):
         objetivo = self.estado.ajuste_dificultad['enemigos']
         vivos = [e for e in self.enemigos if e.vivo]
         self.enemigos = vivos
+        # El jefe no entra en la cuenta es unico y no se repone
+        if self.hay_jefe and self.jefe.vivo:
+            objetivo += 1
         intentos = 0
         while len(self.enemigos) < objetivo and intentos < 60:
             intentos += 1
@@ -271,15 +283,22 @@ class EscenaJuego(Escena):
         if not libres:
             return False
         col, fil = random.choice(libres)
-        x = col * ajustes.TILE_W + (ajustes.TILE_W - ajustes.ENEMIGO_LADO) // 2
+        # Cada criatura tiene su propio tamano
+        tipo = self.nivel.enemigo
+        lado = ajustes.ENEMIGOS.get(tipo, {}).get('lado', ajustes.ENEMIGO_LADO)
+        x = col * ajustes.TILE_W + (ajustes.TILE_W - lado) // 2
         # La base del enemigo se apoya en el piso del tile igual que el jugador
         #si no sus hitbox nunca se tocan
-        y = fil * ajustes.TILE_H + ajustes.TILE_H - ajustes.ENEMIGO_LADO
+        y = fil * ajustes.TILE_H + ajustes.TILE_H - lado
         if math.hypot(x - self.jugador['x'], y - self.jugador['y']) < ajustes.DISTANCIA_APARICION:
             return False
+        # Tampoco encima de otro
+        for otro in self.enemigos:
+            if otro.vivo and math.hypot(x - otro.x, y - otro.y) < ajustes.SEPARACION_ENEMIGOS:
+                return False
         ajuste = self.estado.ajuste_dificultad
         self.enemigos.append(Enemigo(
-            x, y, self.nivel.enemigo,
+            x, y, tipo,
             velocidad=ajuste['velocidad'] + self.velocidad_extra,
             dano=ajuste['dano'],
             puntos=int(ajustes.PUNTOS_POR_ENEMIGO * ajuste['multiplicador'])))
@@ -314,9 +333,18 @@ class EscenaJuego(Escena):
         jugador = self.estado.jugador
         for enemigo in self.enemigos:
             if enemigo.vivo and enemigo.rect.colliderect(caja):
-                if enemigo.recibir_golpe(1) and jugador:
+                # Se le pasa la posicion del jugador para saber hacia donde
+                # sale despedido
+                origen = (self.jugador['x'], self.jugador['y'])
+                if enemigo.recibir_golpe(1, desde=origen) and jugador:
                     jugador.registrar_eliminacion(enemigo.puntos)
+                    if enemigo is self.jefe:
+                        nombre = (self.nivel.jefe or {}).get('nombre', 'La Cangreja')
+                        self.mostrar_aviso('¡%s cae!' % nombre, 3.0)
+                    else:
+                        self.eliminados_nivel += 1
                     self.revisar_bono()
+                    self.revisar_objetivo()
                     if self.audio:
                         self.audio.sfx('enemigo.wav')
 
@@ -349,16 +377,119 @@ class EscenaJuego(Escena):
         else:
             self.mostrar_aviso('Perdiste una vida')
             self._ubicar_jugador(self.nivel.inicio)
-            self.enemigos = []
+            # Se limpian las sombras para dar aire al volver
+            self.enemigos = [self.jefe] if (self.hay_jefe and self.jefe.vivo) else []
+            if self.hay_jefe and self.jefe.vivo:
+                # Lo devuelve a su sitio para que no reaparezca encima
+                self._reubicar_jefe()
             self.poblar_enemigos()
+
+    def _reubicar_jefe(self):
+        #Vuelve al punto donde lo puso el nivel y se le quita el aturdimiento
+        ficha = self.nivel.jefe or {}
+        tw, th = ajustes.TILE_W, ajustes.TILE_H
+        if 'x' in ficha and 'y' in ficha:
+            self.jefe.x = ficha['x'] * tw + (tw - self.jefe.lado) // 2
+            self.jefe.y = ficha['y'] * th + th - self.jefe.lado
+        self.jefe.t_retroceso = 0.0
+        self.jefe.t_aturdido = 0.0
 
     def terminar_partida(self):
         from src.escenas.resultados import EscenaResultados
         self.gestor.cambiar(EscenaResultados(self.gestor, victoria=False))
 
+    def _por_que_no_puede_salir(self):
+        if self.hay_jefe and self.jefe.vivo:
+            return 'La bruja no te deja ir.'
+        if self.faltan == 1:
+            return 'La niebla no deja pasar. Falta 1 sombra.'
+        return f'La niebla no deja pasar. Faltan {self.faltan} sombras.'
+
     def mostrar_aviso(self, texto, segundos=2.0):
         self.aviso = texto
         self.t_aviso = segundos
+    #endregion
+
+
+
+    #region Jefe
+    def invocar_jefe(self):
+        #Lo trae el nivel, con su vida y su velocidad propias. Aparece donde el
+        #nivel diga; si no dice nada, en el centro del mapa
+        ficha = self.nivel.jefe
+        if not ficha:
+            return
+
+        tw, th = ajustes.TILE_W, ajustes.TILE_H
+        tipo = ficha.get('tipo', 'bruja')
+        lado = ajustes.ENEMIGOS.get(tipo, {}).get('lado', ajustes.ENEMIGO_LADO)
+
+        if 'x' in ficha and 'y' in ficha:
+            x = ficha['x'] * tw + (tw - lado) // 2
+            y = ficha['y'] * th + th - lado
+        else:
+            x = self.ancho_mapa // 2 - lado // 2
+            y = self.alto_mapa // 2 - lado // 2
+
+        # La dificultad lo afecta en Leyenda pega mas fuerte y corre mas
+        ajuste = self.estado.ajuste_dificultad
+        self.jefe = Enemigo(
+            x, y, tipo,
+            velocidad=ficha.get('velocidad', 70) + self.velocidad_extra,
+            vida=int(ficha.get('vida', 10) * ajuste.get('multiplicador', 1.0)),
+            dano=ficha.get('dano', 1),
+            puntos=int(ficha.get('puntos', 3000) * ajuste.get('multiplicador', 1.0)))
+        self.enemigos.append(self.jefe)
+        self.mostrar_aviso(ficha.get('nombre', 'La Bruja despierta'), 3.0)
+
+    @property
+    def hay_jefe(self):
+        return self.jefe is not None
+
+    @property
+    def jefe_vencido(self):
+        return self.hay_jefe and not self.jefe.vivo
+    #endregion
+
+    #region Objetivo del nivel y victoria
+    @property
+    def nivel_despejado(self):
+        #Un nivel sin objetivo esta despejado desde el principio.
+        #Si ademas tiene jefe, hay que vencerlo.
+        if self.hay_jefe and not self.jefe_vencido:
+            return False
+        return self.eliminados_nivel >= self.nivel.objetivo
+
+    @property
+    def faltan(self):
+        return max(0, self.nivel.objetivo - self.eliminados_nivel)
+
+    def revisar_objetivo(self):
+        #Se llama al eliminar un enemigo: avisa cuando el nivel queda despejado
+        if not self.nivel_despejado:
+            return
+        # Solo la primera vez que se cumple, no en cada golpe posterior
+        if self.eliminados_nivel > self.nivel.objetivo:
+            return
+        if self.nivel.objetivo <= 0 and not self.hay_jefe:
+            return
+        if self.nivel.es_final:
+            self.ganar()
+        else:
+            self.mostrar_aviso('La niebla se abre. El camino está libre.', 3.0)
+            if self.audio:
+                self.audio.sfx('camino.wav')
+
+    def ganar(self):
+        #Despejar el nivel final cierra la historia
+        from src.escenas.cinematica import EscenaCinematica, FINAL
+        from src.escenas.resultados import EscenaResultados
+
+        def al_terminar():
+            self.gestor.cambiar(EscenaResultados(self.gestor, victoria=True))
+
+        self.gestor.cambiar(EscenaCinematica(self.gestor, FINAL,
+                                             al_terminar=al_terminar))
     #endregion
 
     #region Actualizacion
@@ -368,9 +499,14 @@ class EscenaJuego(Escena):
         self.actualizar_enemigos(dt)
         self.actualizar_camara()
         self.animar(dt)
+        self.animar_objetos(dt)
         self._contar_tiempo(dt)
         if self.t_aviso > 0:
             self.t_aviso = max(0.0, self.t_aviso - dt)
+
+    def animar_objetos(self, dt):
+        for anim in self.objeto_images.values():
+            anim.actualizar(dt)
 
     def _contar_tiempo(self, dt):
         #El tiempo jugado es parte del resumen final
@@ -414,6 +550,9 @@ class EscenaJuego(Escena):
         self.tile_previo = tile
         destino = self.nivel.salida_en(tile[0], tile[1])
         if destino:
+            if not self.nivel_despejado:
+                self.mostrar_aviso(self._por_que_no_puede_salir(), 2.5)
+                return
             nombre, col, fil = destino
             if self.audio:
                 self.audio.sfx('puerta.wav') #todavia no esta este audio
@@ -452,12 +591,22 @@ class EscenaJuego(Escena):
         self.dibujar_terreno(pantalla, rango)
         self.dibujar_ordenados(pantalla, rango)
         self.dibujar_rejilla(pantalla, rango)
+
         if ajustes.MOSTRAR_DEPURACION and self.jugador['atacando']:
             caja = self.rect_ataque()
             pygame.draw.rect(pantalla, (255, 240, 120),
                              (caja.x - self.camera['x'], caja.y - self.camera['y'],
                               caja.width, caja.height), 1)
         self.hud.dibujar(pantalla, self.estado.jugador)
+
+        if self.hay_jefe and self.jefe.vivo:
+            self.hud.barra_jefe(pantalla, self.jefe,
+                                self.nivel.jefe.get('nombre', 'La Bruja'))
+
+        if self.nivel.objetivo > 0 or self.hay_jefe:
+            self.hud.objetivo(pantalla, self.faltan, self.nivel.titulo,
+                              jefe_vivo=self.hay_jefe and self.jefe.vivo)
+        
         if self.t_aviso > 0 and self.aviso:
             self.hud.aviso(pantalla, self.aviso)
         self.dibujar_info(pantalla)
@@ -480,8 +629,8 @@ class EscenaJuego(Escena):
                 py = fil * ajustes.TILE_H - camara['y']
                 caracter = self.nivel.celda(col, fil)
 
-                # Todo el fondo tiene pasto como base
-                pantalla.blit(self.terreno.pasto[0], (px, py))
+                # Debajo de todo va el suelo del nivel, o pasto si no declaro uno
+                pantalla.blit(self.suelo or self.terreno.pasto[0], (px, py))
 
                 tipo_tile = self.nivel.terrenos.get(caracter)
                 if tipo_tile:
@@ -490,9 +639,10 @@ class EscenaJuego(Escena):
                     if tipo_tile == 'agua':
                         for e in self.terreno.recodos(self.nivel.mapa, col, fil, caracter, bitmask):
                             pantalla.blit(self.terreno.agua_esq[e], (px, py))
-                elif caracter in self.objeto_images and caracter != 'A':
+                elif caracter in self.objeto_images and caracter not in self.nivel.altos:
+                    # .imagen sirve igual para un objeto quieto que para uno animado
                     #Los objetos planos van aca, el árbol va por profundidad
-                    pantalla.blit(self.objeto_images[caracter], (px, py))
+                    pantalla.blit(self.objeto_images[caracter].imagen, (px, py))
 
     def dibujar_ordenados(self, pantalla, rango):
         #Personajes y obstáculos altos, ordenados por la Y de sus pies
@@ -520,18 +670,18 @@ class EscenaJuego(Escena):
         })
 
         for enemigo in self.enemigos:
-            if not enemigo.vivo:
-                continue
-            cuadros = self.sprites_enemigo.get(enemigo.tipo) or []
-            if not cuadros:
+            imagen = enemigo.imagen
+            if not enemigo.vivo or imagen is None:
                 continue
             elementos.append({
                 'tipo': 'enemigo',
                 'y_sort': enemigo.y_sort,
                 'x': enemigo.x - camara['x'],
                 'y': enemigo.y - camara['y'],
-                'sprite': cuadros[enemigo.cuadro % len(cuadros)],
+                'sprite': imagen,
                 'ref': enemigo,
+                # Si la criatura tiene animacion de daño propia no se suma destello
+                'destello': enemigo.destella,
             })
 
         for npc in self.npcs:
@@ -545,19 +695,23 @@ class EscenaJuego(Escena):
             })
 
         # arboles miden 96 y el tile 64 entonces se ancla la base al borde inferior del tile y las hojas se salen arriba
-        if 'A' in self.objeto_images:
+        # Los objetos grandes se apoyan por su base en el borde inferior de su
+        # celda y se desbordan hacia arriba, igual que un arbol
+        for caracter, sprite in self.objeto_grandes.items():
             for fil in range(fil_ini, fil_fin + 1):
                 for col in range(col_ini, col_fin + 1):
-                    if self.nivel.celda(col, fil) == 'A':
-                        elementos.append({
-                            'tipo': 'tile',
-                            'y_sort': (fil + 1) * ajustes.TILE_H,
-                            'x': col * ajustes.TILE_W + ajustes.TILE_W // 2 - ajustes.ARBOL_W // 2 - camara['x'],
-                            'y': (fil + 1) * ajustes.TILE_H - ajustes.ARBOL_H - camara['y'],
-                            'sprite': self.objeto_images['A'],
-                            'caracter': 'A',
-                            'celda': (col, fil),
-                        })
+                    if self.nivel.celda(col, fil) != caracter:
+                        continue
+                    base = (fil + 1) * ajustes.TILE_H
+                    elementos.append({
+                        'tipo': 'tile',
+                        'y_sort': base,
+                        'x': col * ajustes.TILE_W + ajustes.TILE_W // 2 - sprite.get_width() // 2 - camara['x'],
+                        'y': base - sprite.get_height() - camara['y'],
+                        'sprite': sprite,
+                        'caracter': caracter,
+                        'celda': (col, fil),
+                    })
 
         elementos.sort(key=lambda e: e['y_sort'])
 
@@ -565,6 +719,12 @@ class EscenaJuego(Escena):
         for e in elementos:
             if not e.get('oculto'):
                 pantalla.blit(e['sprite'], (e['x'], e['y']))
+                if e.get('destello'):
+                    # Se suma luz sobre el sprite
+                    brillo = e['sprite'].copy()
+                    brillo.fill((120, 90, 90), special_flags=pygame.BLEND_RGB_ADD)
+                    brillo.set_alpha(150)
+                    pantalla.blit(brillo, (e['x'], e['y']))
             if ajustes.MOSTRAR_DEPURACION:
                 self.dibujar_hitbox(pantalla, e)
 
