@@ -51,33 +51,82 @@ DIAG = {'NW': ((-1, -1), N | W), 'NE': ((1, -1), N | E),
 class Terreno(object):
     def __init__(self, carpeta, escala=None):
         self.carpeta = carpeta
+
+        # DEL MANIFIESTO SOLO SE USAN TRES COSAS, y son justamente las que NO se
+        # pueden deducir del nombre de archivo:
+        #   1. tile_size          de que tamano vienen los tiles en disco
+        #   2. pasto.tiles        la lista de variantes de pasto (no son bitmask)
+        #   3. agua.esquinas_internas   las calcomanias de esquina del agua
+        # El resto del JSON (el indice bits -> archivo de cada terreno) quedo de
+        # cuando el juego lo necesitaba. Hoy no se lee: el numero del nombre de
+        # archivo ES el bitmask, asi que la carpeta se explica sola. Por eso
+        # cerca y muro no aparecen en el JSON y aun asi funcionan
         with open(os.path.join(carpeta, 'tileset_terreno.json'), encoding='utf-8') as f:
             self.man = json.load(f)
         self.ts = self.man['tile_size']
         self.escala = escala or self.ts
+        # El pasto no es bitmask: son variantes sueltas que se sortean por celda
         self.pasto = [self._img('pasto', n) for n in self.man['terrenos']['pasto']['tiles']]
+
         self.sets = {}
-        for terr in ('camino', 'tierra', 'agua'):
-            d = self.man['terrenos'][terr]
-            self.sets[terr] = {int(k): self._img(terr, v) for k, v in d['tiles'].items()}
+        for nombre in sorted(os.listdir(carpeta)):
+            ruta = os.path.join(carpeta, nombre)
+            if nombre == 'pasto' or not os.path.isdir(ruta):
+                continue
+            self.cargar_conjunto(nombre, ruta)
+
+        # El agua ademas lleva calcomanias para las esquinas concavas: con 16
+        # tiles no alcanza para dibujar una orilla que se mete hacia adentro
         self.agua_esq = {k: self._img('agua', v)
                          for k, v in self.man['terrenos']['agua']['esquinas_internas'].items()}
 
     def _img(self, sub, nombre):
-        ruta = os.path.join(self.carpeta, sub, nombre + '.png')
+        return self._cargar(os.path.join(self.carpeta, sub, nombre + '.png'))
+
+    def _cargar(self, ruta):
         img = pygame.image.load(ruta).convert_alpha()
         if self.escala != self.ts:
             img = pygame.transform.scale(img, (self.escala, self.escala))
         return img
 
+    def cargar_conjunto(self, nombre, carpeta):
+        """
+        Registra un juego de 16 tiles a partir de una carpeta.
+            <loquesea>_<bits>_<descripcion>.png     ej. muro_10_recto_H.png
+        """
+        if pygame is None or not os.path.isdir(carpeta):
+            return False
+        juego = {}
+        for archivo in sorted(os.listdir(carpeta)):
+            if not archivo.endswith('.png'):
+                continue
+            partes = archivo[:-4].split('_')
+            if len(partes) < 2 or not partes[1].isdigit():
+                continue
+            juego[int(partes[1])] = self._cargar(os.path.join(carpeta, archivo))
+        # Si faltara alguna de las 16 combinaciones el mapa se veria con huecos,
+        # asi que se prefiere no registrarlo antes que registrarlo a medias
+        if len(juego) < 16:
+            return False
+        self.sets[nombre] = juego
+        return True
+
     # ------------------------------------------------------------------
     @staticmethod
-    def bitmask(mapa, x, y, ch):
-        """Bits de los 4 vecinos que son del mismo terreno."""
+    def bitmask(mapa, x, y, ch, tambien=None):
+        """
+        Bits de los 4 vecinos que son del mismo terreno.
+
+        "tambien" son otros caracteres que CONTINUAN ese terreno aunque se
+        dibujen distinto. Sirve para una puerta en medio de un muro: sin esto
+        el muro veria un hueco y se rematarian los dos lados, como si la pared
+        se cortara ahi.
+        """
+        iguales = {ch} | set(tambien or ())
         b = 0
         for bit, (dx, dy) in DXY.items():
             ny, nx = y + dy, x + dx
-            if 0 <= ny < len(mapa) and 0 <= nx < len(mapa[ny]) and mapa[ny][nx] == ch:
+            if 0 <= ny < len(mapa) and 0 <= nx < len(mapa[ny]) and mapa[ny][nx] in iguales:
                 b |= bit
         return b
 
@@ -107,14 +156,15 @@ class Terreno(object):
                         superficie.blit(self.agua_esq[esq], (px, py))
 
     @staticmethod
-    def recodos(mapa, x, y, ch, bits):
+    def recodos(mapa, x, y, ch, bits, tambien=None):
         #Esquinas concavas que hay que estampar encima.
+        iguales = {ch} | set(tambien or ())
         fuera = []
         for esq, ((dx, dy), req) in DIAG.items():
             if bits & req != req:
                 continue
             ny, nx = y + dy, x + dx
             dentro = (0 <= ny < len(mapa) and 0 <= nx < len(mapa[ny]))
-            if not dentro or mapa[ny][nx] != ch:
+            if not dentro or mapa[ny][nx] not in iguales:
                 fuera.append(esq)
         return fuera

@@ -127,6 +127,20 @@
         "record_por_vida": 9100,
         "tiempo": 217.8
       }
+    },
+    {
+      "fecha": "18/08/2026 22:08",
+      "dificultad": "Normal",
+      "jugador": {
+        "nombre": "Cholito",
+        "icono": "cholito_1.png",
+        "vidas_perdidas": 3,
+        "vidas_restantes": 2,
+        "eliminados": 18,
+        "puntos": 9050,
+        "record_por_vida": 6300,
+        "tiempo": 264.7
+      }
     }
   ]
 }

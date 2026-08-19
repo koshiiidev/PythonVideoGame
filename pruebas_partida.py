@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pruebas del modelo de partida. No necesita pygame ni abrir ventana.
 
