@@ -27,12 +27,12 @@ MAPA = [
     "A~~~~~~~~~~~~~~~~~~~~~~~~~~~~A",
     "ABBBBBBBBBBBBBBBBBBBBBBBBBBBBA",
     "A..A.p..p.A.p.##.p.A.p..p.A..A",
-    "A.VVVVVVVV....##....VVVVVVVV.A",
-    "A.V......V.a..##..a.V......V.A",
-    "A.V.1...2V..R.##.R..V.3...4V.A",
-    "A.V......V....##....V......V.A",
-    "A.VK..N..V.########.VJ...Y.V.A",
-    "A.VVV.VVVV.#F####F#.VVV.VVVV.A",
+    "A.VVVVVVVVV...##....VVVVVVVV.A",
+    "A.V.......Va..##..a.V......V.A",
+    "A.V.1...2.V.R.##.R..V.3...4V.A",
+    "A.V.......V...##....V......V.A",
+    "A.VK..N...V########.VJ...Y.V.A",
+    "A.VVV.VVVVV#F####F#.VVV.VVVV.A",
     "A.A.T.....q########......T.A.A",
     "A.##########################.A",
     "A.##########################.A",
@@ -104,9 +104,9 @@ SOLIDOS = {'~', 'V', 'M', 'A', 'a', 'q', 'p', 'T', 'C', 'R', 'O', 'J',
 # Todo lo que aparezca aqui se ordena por profundidad automaticamente, porque
 # se desborda de su casilla y taparia mal al jugador
 ALTOS = {
-    '1': 3.0, '2': 3.0, '3': 3.0, '4': 3.0,
+    '1': 3.0, '2': 3.0, '3': 3.0, '4': 3.0, #Casas
     'A': 1.3,      #Arbol
-    '5': 3.5,      # la casona
+    '5': 3.3,      # la casona
     'K': 1.5,      # chinamo
     'Z': 1.6,      # pozo
     'Y': 1.5,      # carreta
@@ -150,7 +150,7 @@ NPCS = [
     {'sprite': 'npc_F_2.png', 'x': 7,  'y': 11, 'solido': True},
     {'sprite': 'npc_F_3.png', 'x': 13, 'y': 11, 'solido': True},
     {'sprite': 'npc_F_4.png', 'x': 22, 'y': 14, 'solido': True},
-    {'sprite': 'npc_F_5.png', 'x': 5,  'y': 9,  'solido': False},  # deja pasar
+    #{'sprite': 'npc_F_5.png', 'x': 5,  'y': 9,  'solido': False},  # deja pasar
     {'sprite': 'npc_F_6.png', 'x': 24, 'y': 11, 'solido': True},
     {'sprite': 'npc_F_7.png', 'x': 16, 'y': 17, 'solido': True},
 ]
