@@ -1,6 +1,48 @@
-Música de fondo. Formatos: .ogg (recomendado) o .mp3
+===============================================================================
+MÚSICA DE FONDO - LISTA DE ARCHIVOS REQUERIDOS
+===============================================================================
+Formatos soportados: .ogg (recomendado) o .mp3
+Ubicación de carga: assets/audio/musica/
 
-Se reproduce con:  audio.musica('nombre.ogg')
+A continuación se detallan todas las pistas de música que el juego busca y
+el momento/escena en que se reproducen:
 
-Cada escena decide su pista. Si el archivo no existe, el juego avisa por
-consola y sigue corriendo sin música.
+1. intro.ogg
+   - Escena: src/escenas/cinematica.py
+   - Descripción: Música ambiental y de misterio para la cinemática de 
+     introducción narrativa ("La Leyenda de la Cangreja") y la escena final.
+
+2. menu.ogg
+   - Escena: src/escenas/menu.py
+   - Descripción: Música principal de los menús (pantalla de inicio y selección 
+     de personaje).
+
+3. pueblo.ogg
+   - Escena: niveles/pueblo.py (Nivel inicial)
+   - Descripción: Música de fondo para el mapa exterior del pueblo campesino y 
+     cafetales.
+
+4. casa.ogg
+   - Escena: niveles/casa.py (Nivel interior)
+   - Descripción: Música para el interior de la casona (ambiente más calmado 
+     o misterioso).
+
+5. mazmorra.ogg
+   - Escena: niveles/mazmorra.py (Nivel final)
+   - Descripción: Música tensa y oscura para la mazmorra subterránea y la batalla 
+     contra el jefe (La Bruja).
+
+6. final.ogg
+   - Escena: src/escenas/resultados.py (cuando victoria == True)
+   - Descripción: Música triunfal o de logro para la pantalla de victoria al 
+     despejar la mazmorra y completar la historia.
+
+7. derrota.ogg
+   - Escena: src/escenas/resultados.py (cuando victoria == False)
+   - Descripción: Música triste o dramática de "Game Over" para la pantalla de 
+     resultados al perder todas las vidas.
+
+-------------------------------------------------------------------------------
+Nota: Si algún archivo no existe, el juego muestra un aviso en consola y 
+continúa funcionando sin música.
+===============================================================================

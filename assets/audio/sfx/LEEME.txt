@@ -1,6 +1,53 @@
-Efectos de sonido. Formatos: .wav (recomendado) o .ogg
+===============================================================================
+EFECTOS DE SONIDO (SFX) - LISTA DE ARCHIVOS REQUERIDOS
+===============================================================================
+Formatos soportados: .wav (muy recomendado, carga sin retardo) o .ogg
+Ubicación de carga: assets/audio/sfx/
 
-Se reproducen con:  audio.sfx('nombre.wav')
+A continuación se detallan todos los efectos de sonido invocados en el código 
+y la acción o evento que representan:
 
-Conviene .wav porque se cargan enteros en memoria y suenan sin retardo.
-Sugeridos: espada.wav, paso.wav, cofre.wav, menu_mover.wav, menu_ok.wav
+1. menu_mover.wav
+   - Usado en: src/escenas/menu.py, src/escenas/pausa.py
+   - Descripción: Sonido corto tipo cursor al moverse entre las opciones de los 
+     menús (navegación vertical/horizontal con teclado o mouse).
+
+2. menu_ok.wav
+   - Usado en: src/escenas/menu.py, src/escenas/pausa.py, src/escenas/seleccion_jugador.py
+   - Descripción: Sonido de confirmación o selección al pulsar Enter/Espacio/Clic 
+     para aceptar una opción o confirmar la elección de personaje.
+
+3. espada.wav
+   - Usado en: src/escenas/juego.py
+   - Descripción: Sonido de ataque / blandir la espada o machete cuando el jugador 
+     presiona la barra espaciadora para golpear.
+
+4. enemigo.wav
+   - Usado en: src/escenas/juego.py
+   - Descripción: Sonido de impacto al golpear y disipar una sombra o debilitar al 
+     jefe.
+
+5. dano.wav
+   - Usado en: src/escenas/juego.py
+   - Descripción: Sonido de recibir daño / queja o golpe cuando un enemigo toca al 
+     jugador y este pierde una vida.
+
+6. bono.wav
+   - Usado en: src/escenas/juego.py
+   - Descripción: Sonido positivo/jingle corto al alcanzar la racha de eliminaciones 
+     necesarias para el bono de puntuación ("¡BONO!").
+
+7. camino.wav
+   - Usado en: src/escenas/juego.py
+   - Descripción: Sonido ambiental o mágico al cumplir el objetivo del nivel y 
+     despejar la niebla ("La niebla se abre. El camino está libre.").
+
+8. puerta.wav
+   - Usado en: src/escenas/juego.py
+   - Descripción: Sonido de apertura o transición al cruzar una puerta o cambiar 
+     de escenario (por ejemplo, entrar a la casona o bajar a la mazmorra).
+
+-------------------------------------------------------------------------------
+Nota: Si algún archivo no existe, el juego muestra un aviso en consola y 
+continúa ejecutándose con normalidad.
+===============================================================================
