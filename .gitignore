@@ -8,3 +8,8 @@ pruebas_partida.py
 pruebas_animacion.py
 pruebas_niveles.py
 ver_mapa.py
+
+# Entorno virtual
+.venv/
+venv/
+env/

@@ -1,0 +1,4 @@
+# pygame-ce es el pygame mantenido por la comunidad. Se importa igual ("import
+# pygame") y es el unico que tiene version compilada para Python 3.13 y 3.14.
+# No instalar "pygame" y "pygame-ce" juntos: los dos ocupan el mismo nombre.
+pygame-ce>=2.5.0
