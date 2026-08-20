@@ -1,0 +1,12 @@
+# Los fines de linea se normalizan a LF dentro del repo
+* text=auto eol=lf
+
+# Los binarios no se tocan
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ogg binary
+*.mp3 binary
+*.wav binary
+*.pdf binary
+*.docx binary

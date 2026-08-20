@@ -8,6 +8,7 @@ pruebas_partida.py
 pruebas_animacion.py
 pruebas_niveles.py
 ver_mapa.py
+datos/estadisticas.json
 
 # Entorno virtual
 .venv/
