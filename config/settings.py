@@ -159,27 +159,25 @@ PARPADEO_HZ = 8               # velocidad del parpadeo mientras es invulnerable
 # defecto cada nivel puede reescribir lo que quiera con su propio COLISIONES.
 COLISION_POR_DEFECTO = (1.0, 1.0)   # lo que no aparezca aqui bloquea entero
 COLISIONES = {
-    # Terreno: bloquea la casilla completa, no tendria sentido a medias
-    '~': (1.00, 1.00),   # agua
-    'M': (0.70, 0.85),   # muro
-    'V': (0.70, 0.85),   # cerca: se apoya en la mitad de abajo del tile
+    # Terreno
+    '~': (0.70, 0.85, 'centro'),   # agua
+    'M': (0.70, 0.85),             # muro
+    'V': (0.70, 0.85),             # cerca: se apoya en la mitad de abajo del tile
 
-    # Vegetacion: solo el tronco o la mata
-    'A': (0.45, 0.83),   # arbol comun
+    # Vegetacion
+    'A': (0.45, 0.83),             # arbol comun
     'a': (0.45, 0.50, 'centro'),   # arbol frutal
-    'q': (0.40, 0.30, 'centro'),   # arbol seco
-    'p': (0.35, 0.20),   # palmera
-    'C': (0.55, 0.55),   # cafetal
-    # El tronco esta tirado cruzando la casilla, no apoyado en el borde de
-    # abajo: su caja va en el medio
-    'T': (0.90, 0.40, 'centro'),
-    'R': (0.90, 0.80),   # piedra
+    'q': (0.50, 0.45, 'centro'),   # arbol seco
+    'p': (0.25, 0.50, 'centro'),   # palmera chiquita
+    'C': (0.55, 0.55),             # cafetal
+    'T': (0.90, 0.40, 'centro'),   # tronco caido
+    'R': (0.90, 0.80),             # piedra
 
-    # Trastos
-    'O': (0.50, 0.30),   # barril
+    # Cosas
+    'O': (0.70, 0.50),   # barril
     'J': (0.45, 0.28),   # tinaja
-    'N': (1.30, 0.30),   # banca, se dibuja mas ancha que su tile
-    'F': (0.25, 0.15),   # farol: solo el pie de hierro
+    'N': (1.30, 0.40),   # banca, se dibuja mas ancha que su tile
+    'F': (0.30, 0.35),   # farol
     'Z': (1.20, 0.55),   # pozo
     'K': (1.20, 0.50),   # chinamo
     'Y': (1.20, 0.45),   # carreta
