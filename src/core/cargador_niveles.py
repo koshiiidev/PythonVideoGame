@@ -15,6 +15,9 @@ from src.core import geometria
 
 _cache = {}
 
+# En la capa DECOR el hueco es el espacio, no el punto
+VACIO_DECOR = ' '
+
 
 class Nivel(object):
 
@@ -69,8 +72,23 @@ class Nivel(object):
         self.filas = len(self.mapa)
         self.cols = max(len(f) for f in self.mapa)
 
+        # Capa de ENCIMA, opcional. MAPA es el suelo y lo que ocupa la celda
+        # entera; DECOR es lo que se PARA sobre ese suelo. Son dos porque una
+        # celda guarda un solo caracter: con una sola capa, poner un barril en
+        # el camino borraba el camino y quedaba un hueco de pasto debajo.
+        # Se rellena al tamano de MAPA para no revisar limites al leerla.
+        self.decor = self._normalizar(getattr(mod, 'DECOR', None))
+
         # Se resuelve una sola vez al cargar el nivel, no en cada frame
         self.bloqueados = self._calcular_bloqueados()
+
+    def _normalizar(self, decor):
+        #Deja la capa de decoracion con exactamente filas x cols caracteres
+        if not decor:
+            return None
+        return [(decor[i] if i < len(decor) else '')
+                .ljust(self.cols, VACIO_DECOR)[:self.cols]
+                for i in range(self.filas)]
 
     def _calcular_bloqueados(self):
         #Convierte las HUELLAS en un conjunto de celdas (col, fil) ocupadas.
@@ -94,12 +112,21 @@ class Nivel(object):
             return self.mapa[fil][col]
         return '.' #pasto o suelo base del nivel
 
+    def adorno(self, col, fil):
+        #Que hay en la capa de encima. Vacio si no hay capa o no hay nada ahi
+        if self.decor is None:
+            return VACIO_DECOR
+        if 0 <= fil < self.filas and 0 <= col < self.cols:
+            return self.decor[fil][col]
+        return VACIO_DECOR
+
     def es_solido(self, col, fil):
-        # Una celda estorba si su caracter es solido, o si le cae encima la
-        # huella de un objeto grande vecino
+        # Una celda estorba si el caracter de CUALQUIERA de las dos capas es
+        # solido, o si le cae encima la huella de un objeto grande vecino
         if (col, fil) in self.bloqueados:
             return True
-        return self.celda(col, fil) in self.solidos
+        return (self.celda(col, fil) in self.solidos
+                or self.adorno(col, fil) in self.solidos)
 
     def colision(self, col, fil):
         """
@@ -114,7 +141,11 @@ class Nivel(object):
         if (col, fil) in self.bloqueados:
             medida = (1.0, 1.0)
         else:
-            medida = self.colisiones.get(self.celda(col, fil),
+            # Si lo que estorba esta en la capa de encima manda esa: el suelo
+            # de abajo (un camino, un piso) no bloquea nada por si mismo
+            adorno = self.adorno(col, fil)
+            caracter = adorno if adorno in self.solidos else self.celda(col, fil)
+            medida = self.colisiones.get(caracter,
                                          ajustes.COLISION_POR_DEFECTO)
         if len(medida) >= 3:
             return tuple(medida[:3])
@@ -129,6 +160,97 @@ class Nivel(object):
 
     def alto_px(self, tile_h):
         return self.filas * tile_h
+    #endregion
+
+    #region Revision
+    def problemas(self):
+        """Errores del nivel, en texto. Lista vacia = el nivel esta bien.
+
+        Sirve para cazar los errores tipicos de dibujar un mapa a mano sin
+        tener que abrir el juego a buscarlos a ojo.
+        """
+        fallos = []
+        conocidos = set(self.terrenos) | set(self.objetos) | {'.'}
+        if self.suelo:
+            conocidos.add(self.suelo)
+
+        largos = set(len(f) for f in self.mapa)
+        if len(largos) > 1:
+            fallos.append('MAPA tiene filas de distinto largo: %s' % sorted(largos))
+
+        if self.decor is not None:
+            crudo = getattr(self.modulo, 'DECOR', [])
+            if len(crudo) != self.filas:
+                fallos.append('DECOR tiene %d filas y MAPA tiene %d'
+                              % (len(crudo), self.filas))
+
+        for fil in range(self.filas):
+            for col in range(self.cols):
+                ch = self.celda(col, fil)
+                if ch not in conocidos:
+                    fallos.append('MAPA (%d,%d): el caracter %r no esta en '
+                                  'TERRENOS ni en OBJETOS' % (col, fil, ch))
+                ad = self.adorno(col, fil)
+                if ad == VACIO_DECOR:
+                    continue
+                if ad == '.':
+                    fallos.append('DECOR (%d,%d): en DECOR el hueco es el '
+                                  'espacio " ", no el punto' % (col, fil))
+                elif ad not in self.objetos:
+                    fallos.append('DECOR (%d,%d): el caracter %r no esta en '
+                                  'OBJETOS' % (col, fil, ad))
+                elif ad in self.terrenos:
+                    fallos.append('DECOR (%d,%d): %r es un TERRENO y los '
+                                  'terrenos van en MAPA, no en DECOR'
+                                  % (col, fil, ad))
+                elif ad in self.huellas:
+                    fallos.append('DECOR (%d,%d): %r tiene HUELLA de varias '
+                                  'casillas y eso solo se calcula sobre MAPA'
+                                  % (col, fil, ad))
+                elif (self.celda(col, fil) in self.solidos
+                      and ad in self.solidos):
+                    fallos.append('DECOR (%d,%d): %r es solido y el suelo %r '
+                                  'tambien; se tapan entre si'
+                                  % (col, fil, ad, self.celda(col, fil)))
+
+        for npc in self.npcs:
+            col, fil = npc.get('x', 0), npc.get('y', 0)
+            if not (0 <= col < self.cols and 0 <= fil < self.filas):
+                fallos.append('NPC %s en (%d,%d): fuera del mapa'
+                              % (npc.get('sprite'), col, fil))
+            elif self.es_solido(col, fil):
+                fallos.append('NPC %s en (%d,%d): encima de algo solido'
+                              % (npc.get('sprite'), col, fil))
+
+        for (col, fil), destino in self.salidas.items():
+            if not (0 <= col < self.cols and 0 <= fil < self.filas):
+                fallos.append('SALIDA (%d,%d): fuera del mapa' % (col, fil))
+            elif self.es_solido(col, fil):
+                fallos.append('SALIDA (%d,%d): sobre algo solido, el jugador '
+                              'nunca va a poder pisarla' % (col, fil))
+
+        if self.inicio:
+            col, fil = self.inicio
+            if not (0 <= col < self.cols and 0 <= fil < self.filas):
+                fallos.append('JUGADOR_INICIO %s: fuera del mapa' % (self.inicio,))
+            elif self.es_solido(col, fil):
+                fallos.append('JUGADOR_INICIO %s: sobre algo solido' % (self.inicio,))
+
+        # Las tablas de objetos tienen que hablar de letras que existan.
+        # De COLISIONES solo se revisa lo que declara ESTE nivel: la tabla
+        # comun de settings trae letras de todo el proyecto a proposito.
+        propias = getattr(self.modulo, 'COLISIONES', {}) or {}
+        for tabla, nombre in ((self.altos, 'ALTOS'), (self.huellas, 'HUELLAS'),
+                              (propias, 'COLISIONES')):
+            for ch in tabla:
+                if ch not in self.objetos and ch not in self.terrenos:
+                    fallos.append('%s declara %r y esa letra no esta en '
+                                  'OBJETOS ni en TERRENOS' % (nombre, ch))
+        for ch in self.profundidad:
+            if ch not in self.objetos:
+                fallos.append('PROFUNDIDAD declara %r y no esta en OBJETOS' % ch)
+
+        return fallos
     #endregion
 
 

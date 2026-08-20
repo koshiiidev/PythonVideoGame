@@ -225,14 +225,6 @@ class EscenaJuego(Escena):
                 # Se apila: la partida queda congelada debajo, sin perder nada
                 from src.escenas.pausa import EscenaPausa
                 self.gestor.apilar(EscenaPausa(self.gestor, self))
-            elif evento.key in (pygame.K_UP, pygame.K_w):
-                self.teclas['up'] = True
-            elif evento.key in (pygame.K_DOWN, pygame.K_s):
-                self.teclas['down'] = True
-            elif evento.key in (pygame.K_LEFT, pygame.K_a):
-                self.teclas['left'] = True
-            elif evento.key in (pygame.K_RIGHT, pygame.K_d):
-                self.teclas['right'] = True
             elif evento.key == pygame.K_g and ajustes.MOSTRAR_DEPURACION:
                 #La rejilla es de depuración si está apagada, la tecla no hace nada
                 self.estado.mostrar_rejilla = not self.estado.mostrar_rejilla
@@ -245,15 +237,6 @@ class EscenaJuego(Escena):
                 if self.audio:
                     self.audio.sfx('espada.wav') #todavia no esta este audio
 
-        elif evento.type == pygame.KEYUP:
-            if evento.key in (pygame.K_UP, pygame.K_w):
-                self.teclas['up'] = False
-            elif evento.key in (pygame.K_DOWN, pygame.K_s):
-                self.teclas['down'] = False
-            elif evento.key in (pygame.K_LEFT, pygame.K_a):
-                self.teclas['left'] = False
-            elif evento.key in (pygame.K_RIGHT, pygame.K_d):
-                self.teclas['right'] = False
     #endregion
 
 
@@ -502,6 +485,7 @@ class EscenaJuego(Escena):
 
     #region Actualizacion
     def actualizar(self, dt):
+        self.leer_teclado()
         self.mover(dt)
         self.revisar_salida()
         self.actualizar_enemigos(dt)
@@ -532,19 +516,38 @@ class EscenaJuego(Escena):
         if self.t_invulnerable > 0:
             self.t_invulnerable = max(0.0, self.t_invulnerable - dt)
 
+    def leer_teclado(self):
+        #Se le pregunta el estado real al teclado en cada frame, en vez de
+        #llevarlo a mano con KEYDOWN/KEYUP. Asi, si la ventana pierde el foco
+        #con una tecla apretada, el personaje no se queda caminando solo
+        t = pygame.key.get_pressed()
+        self.teclas['up'] = t[pygame.K_UP] or t[pygame.K_w]
+        self.teclas['down'] = t[pygame.K_DOWN] or t[pygame.K_s]
+        self.teclas['left'] = t[pygame.K_LEFT] or t[pygame.K_a]
+        self.teclas['right'] = t[pygame.K_RIGHT] or t[pygame.K_d]
+
     def mover(self, dt):
         j = self.jugador
-        j['moviendose'] = False
-        nueva_x, nueva_y = j['x'], j['y']
+        # -1, 0 o 1 en cada eje. Sumar los dos permite caminar en diagonal
+        dx = int(self.teclas['right']) - int(self.teclas['left'])
+        dy = int(self.teclas['down']) - int(self.teclas['up'])
+        j['moviendose'] = bool(dx or dy)
 
-        if self.teclas['up']:
-            j['direccion'] = 'espalda'; nueva_y -= j['velocidad'] * dt; j['moviendose'] = True
-        elif self.teclas['down']:
-            j['direccion'] = 'frente';  nueva_y += j['velocidad'] * dt; j['moviendose'] = True
-        elif self.teclas['left']:
-            j['direccion'] = 'izquierda'; nueva_x -= j['velocidad'] * dt; j['moviendose'] = True
-        elif self.teclas['right']:
-            j['direccion'] = 'derecha'; nueva_x += j['velocidad'] * dt; j['moviendose'] = True
+        if dx and dy:
+            # En diagonal se avanza en los dos ejes a la vez. Sin corregir, el
+            # recorrido seria 1.41 veces mas largo y el jugador iria mas rapido
+            # en diagonal que en linea recta
+            dx *= 0.7071
+            dy *= 0.7071
+
+        if dx:
+            j['direccion'] = 'derecha' if dx > 0 else 'izquierda'
+        elif dy:
+            j['direccion'] = 'frente' if dy > 0 else 'espalda'
+
+        paso = j['velocidad'] * dt
+        nueva_x = j['x'] + dx * paso
+        nueva_y = j['y'] + dy * paso
 
         # Cada eje se resuelve por separado
         if nueva_x != j['x']:
@@ -577,11 +580,20 @@ class EscenaJuego(Escena):
 
     def actualizar_camara(self):
         c, j = self.camera, self.jugador
-        c['x'] = j['x'] + ajustes.JUG_W // 2 - ajustes.ANCHO // 2
-        c['y'] = j['y'] + ajustes.JUG_H // 2 - ajustes.ALTO // 2
-        # Nunca mostrar fuera del mapa, deja la cámara pegada en 0 y el mapa queda quieto
-        c['x'] = max(0, min(max(0, self.ancho_mapa - ajustes.ANCHO), c['x']))
-        c['y'] = max(0, min(max(0, self.alto_mapa - ajustes.ALTO), c['y']))
+        c['x'] = self.eje_camara(j['x'] + ajustes.JUG_W // 2,
+                                 ajustes.ANCHO, self.ancho_mapa)
+        c['y'] = self.eje_camara(j['y'] + ajustes.JUG_H // 2,
+                                 ajustes.ALTO, self.alto_mapa)
+
+    @staticmethod
+    def eje_camara(centro, tam_pantalla, tam_mapa):
+        #Un eje de la camara: cuanto hay que restarle al mundo para dibujarlo
+        if tam_mapa <= tam_pantalla:
+            # El mapa entra completo: se centra y no se mueve. Sale negativo a
+            # proposito, asi el mapa se corre hacia adentro de la pantalla
+            return -(tam_pantalla - tam_mapa) // 2
+        # Mapa grande: sigue al jugador sin mostrar de mas por los bordes
+        return max(0, min(tam_mapa - tam_pantalla, centro - tam_pantalla // 2))
 
     def animar(self, dt):
         self.t_frame += dt
@@ -603,7 +615,7 @@ class EscenaJuego(Escena):
 
     #region Dibujo
     def dibujar(self, pantalla):
-        pantalla.fill(ajustes.BLANCO)
+        pantalla.fill(ajustes.COLOR_FUERA_MAPA)
         rango = self.rango_visible()
         self.dibujar_terreno(pantalla, rango)
         self.dibujar_ordenados(pantalla, rango)
@@ -647,8 +659,11 @@ class EscenaJuego(Escena):
                 py = fil * ajustes.TILE_H - camara['y']
                 caracter = self.nivel.celda(col, fil)
 
-                # Debajo de todo va el suelo del nivel, o pasto si no declaro uno
-                pantalla.blit(self.suelo or self.terreno.pasto[0], (px, py))
+                # Debajo de todo va el suelo del nivel, o pasto si no declaro
+                # uno. El pasto alterna variantes para no verse repetido
+                pantalla.blit(
+                    self.suelo or self.terreno.pasto_en(
+                        col, fil, ajustes.PROB_VARIANTE_PASTO), (px, py))
 
                 tipo_tile = self.nivel.terrenos.get(caracter)
                 if tipo_tile:
@@ -667,6 +682,13 @@ class EscenaJuego(Escena):
                     #Aca solo van los PLANOS: los que se ordenan por
                     #profundidad se dibujan despues, con los personajes
                     pantalla.blit(self.objeto_images[caracter].imagen, (px, py))
+
+                # Capa DECOR: lo que se para sobre el suelo. Va encima del
+                # terreno, por eso se puede poner un barril en pleno camino
+                adorno = self.nivel.adorno(col, fil)
+                if (adorno in self.objeto_images
+                        and adorno not in self.objeto_profundos):
+                    pantalla.blit(self.objeto_images[adorno].imagen, (px, py))
 
     def dibujar_ordenados(self, pantalla, rango):
         #Personajes y obstáculos altos, ordenados por la Y de sus pies
@@ -723,22 +745,25 @@ class EscenaJuego(Escena):
         # asi el jugador pasa por delante o por detras segun donde esten sus pies
         for fil in range(fil_ini, fil_fin + 1):
             for col in range(col_ini, col_fin + 1):
-                caracter = self.nivel.celda(col, fil)
-                if caracter not in self.objeto_profundos:
-                    continue
-                sprite = self.sprite_objeto(caracter)
-                if sprite is None:
-                    continue
-                base = (fil + 1) * ajustes.TILE_H
-                elementos.append({
-                    'tipo': 'tile',
-                    'y_sort': base,
-                    'x': col * ajustes.TILE_W + ajustes.TILE_W // 2 - sprite.get_width() // 2 - camara['x'],
-                    'y': base - sprite.get_height() - camara['y'],
-                    'sprite': sprite,
-                    'caracter': caracter,
-                    'celda': (col, fil),
-                })
+                # Las dos capas pueden traer objetos que se ordenan por
+                # profundidad: un arbol del suelo o uno puesto en DECOR
+                for caracter in (self.nivel.celda(col, fil),
+                                 self.nivel.adorno(col, fil)):
+                    if caracter not in self.objeto_profundos:
+                        continue
+                    sprite = self.sprite_objeto(caracter)
+                    if sprite is None:
+                        continue
+                    base = (fil + 1) * ajustes.TILE_H
+                    elementos.append({
+                        'tipo': 'tile',
+                        'y_sort': base,
+                        'x': col * ajustes.TILE_W + ajustes.TILE_W // 2 - sprite.get_width() // 2 - camara['x'],
+                        'y': base - sprite.get_height() - camara['y'],
+                        'sprite': sprite,
+                        'caracter': caracter,
+                        'celda': (col, fil),
+                    })
 
         elementos.sort(key=lambda e: e['y_sort'])
 

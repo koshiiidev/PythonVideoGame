@@ -41,6 +41,17 @@ try:
 except ImportError:
     pygame = None
 
+def _ruido(col, fil):
+    """Numero estable entre 0 y 1 para una celda.
+
+    Estable = la misma celda siempre da el mismo valor. Con random() el pasto
+    cambiaria en cada frame y la pantalla parpadearia.
+    """
+    h = (col * 374761393 + fil * 668265263) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+    return ((h >> 16) & 0xFFFF) / 65535.0
+
+
 N, E, S, W = 1, 2, 4, 8
 DXY = {N: (0, -1), E: (1, 0), S: (0, 1), W: (-1, 0)}
 # cada esquina: desplazamiento diagonal + los dos bits ortogonales que la rodean
@@ -129,6 +140,17 @@ class Terreno(object):
             if 0 <= ny < len(mapa) and 0 <= nx < len(mapa[ny]) and mapa[ny][nx] in iguales:
                 b |= bit
         return b
+
+    def pasto_en(self, col, fil, prob=0.0):
+        #Tile de pasto de esa celda. `prob` es cada cuanto sale una variante
+        if prob <= 0.0 or len(self.pasto) < 2:
+            return self.pasto[0]
+        r = _ruido(col, fil)
+        if r >= prob:
+            return self.pasto[0]
+        # el tramo [0, prob) se reparte entre las variantes
+        indice = int(r / prob * (len(self.pasto) - 1)) + 1
+        return self.pasto[min(indice, len(self.pasto) - 1)]
 
     def tile(self, terreno, bits):
         return self.sets[terreno][bits]
