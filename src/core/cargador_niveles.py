@@ -58,6 +58,10 @@ class Nivel(object):
         # personajes segun la Y de su base, para poder caminar por detras.
         # Los de ALTOS ya entran solos, esto es para los que miden un tile
         self.profundidad = set(getattr(mod, 'PROFUNDIDAD', ()) or ())
+        # Cosas entre las que se puede pasar a proposito (el cafetal). Se parte
+        # de la lista comun y el nivel puede agregar las suyas
+        self.atravesables = set(ajustes.ATRAVESABLES) | set(
+            getattr(mod, 'ATRAVESABLES', ()) or ())
         # Jefe del nivel. Es un diccionario. None = nivel sin jefe.
         self.jefe = getattr(mod, 'JEFE', None)
         # cuantos hay que derrotar para despejar el nivel. 0 = ninguno
@@ -160,93 +164,17 @@ class Nivel(object):
 
     #region Revision
     def problemas(self):
-        """Errores del nivel, en texto. Lista vacia = el nivel esta bien.
-
-        Sirve para cazar los errores tipicos de dibujar un mapa a mano sin
-        tener que abrir el juego a buscarlos a ojo.
         """
-        fallos = []
-        conocidos = set(self.terrenos) | set(self.objetos) | {'.'}
-        if self.suelo:
-            conocidos.add(self.suelo)
+        Errores del nivel, en texto. Lista vacia = el nivel esta bien.
 
-        largos = set(len(f) for f in self.mapa)
-        if len(largos) > 1:
-            fallos.append('MAPA tiene filas de distinto largo: %s' % sorted(largos))
-
-        if self.decor is not None:
-            crudo = getattr(self.modulo, 'DECOR', [])
-            if len(crudo) != self.filas:
-                fallos.append('DECOR tiene %d filas y MAPA tiene %d'
-                              % (len(crudo), self.filas))
-
-        for fil in range(self.filas):
-            for col in range(self.cols):
-                ch = self.celda(col, fil)
-                if ch not in conocidos:
-                    fallos.append('MAPA (%d,%d): el caracter %r no esta en '
-                                  'TERRENOS ni en OBJETOS' % (col, fil, ch))
-                ad = self.adorno(col, fil)
-                if ad == VACIO_DECOR:
-                    continue
-                if ad == '.':
-                    fallos.append('DECOR (%d,%d): en DECOR el hueco es el '
-                                  'espacio " ", no el punto' % (col, fil))
-                elif ad not in self.objetos:
-                    fallos.append('DECOR (%d,%d): el caracter %r no esta en '
-                                  'OBJETOS' % (col, fil, ad))
-                elif ad in self.terrenos:
-                    fallos.append('DECOR (%d,%d): %r es un TERRENO y los '
-                                  'terrenos van en MAPA, no en DECOR'
-                                  % (col, fil, ad))
-                elif ad in self.huellas:
-                    fallos.append('DECOR (%d,%d): %r tiene HUELLA de varias '
-                                  'casillas y eso solo se calcula sobre MAPA'
-                                  % (col, fil, ad))
-                elif (self.celda(col, fil) in self.solidos
-                      and ad in self.solidos):
-                    fallos.append('DECOR (%d,%d): %r es solido y el suelo %r '
-                                  'tambien; se tapan entre si'
-                                  % (col, fil, ad, self.celda(col, fil)))
-
-        for npc in self.npcs:
-            col, fil = npc.get('x', 0), npc.get('y', 0)
-            if not (0 <= col < self.cols and 0 <= fil < self.filas):
-                fallos.append('NPC %s en (%d,%d): fuera del mapa'
-                              % (npc.get('sprite'), col, fil))
-            elif self.es_solido(col, fil):
-                fallos.append('NPC %s en (%d,%d): encima de algo solido'
-                              % (npc.get('sprite'), col, fil))
-
-        for (col, fil), destino in self.salidas.items():
-            if not (0 <= col < self.cols and 0 <= fil < self.filas):
-                fallos.append('SALIDA (%d,%d): fuera del mapa' % (col, fil))
-            elif self.es_solido(col, fil):
-                fallos.append('SALIDA (%d,%d): sobre algo solido, el jugador '
-                              'nunca va a poder pisarla' % (col, fil))
-
-        if self.inicio:
-            col, fil = self.inicio
-            if not (0 <= col < self.cols and 0 <= fil < self.filas):
-                fallos.append('JUGADOR_INICIO %s: fuera del mapa' % (self.inicio,))
-            elif self.es_solido(col, fil):
-                fallos.append('JUGADOR_INICIO %s: sobre algo solido' % (self.inicio,))
-
-        # Las tablas de objetos tienen que hablar de letras que existan.
-        # De COLISIONES solo se revisa lo que declara ESTE nivel: la tabla
-        # comun de settings trae letras de todo el proyecto a proposito.
-        propias = getattr(self.modulo, 'COLISIONES', {}) or {}
-        for tabla, nombre in ((self.altos, 'ALTOS'), (self.huellas, 'HUELLAS'),
-                              (propias, 'COLISIONES')):
-            for ch in tabla:
-                if ch not in self.objetos and ch not in self.terrenos:
-                    fallos.append('%s declara %r y esa letra no esta en '
-                                  'OBJETOS ni en TERRENOS' % (nombre, ch))
-        for ch in self.profundidad:
-            if ch not in self.objetos:
-                fallos.append('PROFUNDIDAD declara %r y no esta en OBJETOS' % ch)
-
-        return fallos
+        Caza los errores tipicos de dibujar un mapa a mano sin tener que abrir
+        el juego a buscarlos a ojo. Las revisiones NO estan aqui: viven en
+        src/core/revision_niveles.py, para que las use igual el validador de
+        herramientas/ y el corredor de pruebas, sin que existan dos copias que
+        se vayan separando con el tiempo.
+        """
+        from src.core import revision_niveles
+        return revision_niveles.problemas(self)
     #endregion
 
 

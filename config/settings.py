@@ -166,6 +166,13 @@ PARPADEO_HZ = 8               # velocidad del parpadeo mientras es invulnerable
 # Esta tabla es la convencion de letras del proyecto y sirve de valor por
 # defecto cada nivel puede reescribir lo que quiera con su propio COLISIONES.
 COLISION_POR_DEFECTO = (1.0, 1.0)   # lo que no aparezca aqui bloquea entero
+
+# Cosas entre las que SE PUEDE pasar a proposito. Una fila de cosas solidas
+# normalmente tiene que ser una barrera, y si entre dos vecinas cabe el jugador
+# es un error de medidas. Pero hay excepciones queridas: por el cafetal se
+# camina entre las hileras, como en un cafetal de verdad. Lo que este aqui no
+# se reporta como hueco.
+ATRAVESABLES = {'C'}
 COLISIONES = {
     # Terreno
     '~': (0.70, 0.85, 'centro'),   # agua
@@ -173,7 +180,7 @@ COLISIONES = {
     'V': (0.70, 0.85),             # cerca: se apoya en la mitad de abajo del tile
 
     # Vegetacion
-    'A': (0.45, 0.83),             # arbol comun
+    'A': (0.55, 0.83),             # arbol comun
     'a': (0.45, 0.50, 'centro'),   # arbol frutal
     'q': (0.50, 0.45, 'centro'),   # arbol seco
     'p': (0.25, 0.50, 'centro'),   # palmera chiquita
