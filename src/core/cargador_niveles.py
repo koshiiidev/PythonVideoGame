@@ -55,6 +55,10 @@ class Nivel(object):
         # personajes segun la Y de su base, para poder caminar por detras.
         # Los de ALTOS ya entran solos, esto es para los que miden un tile
         self.profundidad = set(getattr(mod, 'PROFUNDIDAD', ()) or ())
+        # Cosas entre las que se puede pasar a proposito (el cafetal). Se parte
+        # de la lista comun y el nivel puede agregar las suyas
+        self.atravesables = set(ajustes.ATRAVESABLES) | set(
+            getattr(mod, 'ATRAVESABLES', ()) or ())
         # Jefe del nivel. Es un diccionario. None = nivel sin jefe.
         self.jefe = getattr(mod, 'JEFE', None)
         # cuantos hay que derrotar para despejar el nivel. 0 = ninguno
