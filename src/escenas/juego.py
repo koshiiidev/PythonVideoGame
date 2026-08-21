@@ -41,6 +41,10 @@ class EscenaJuego(Escena):
         self.jugador_frames = self._cargar_animaciones('%s_sp.png')
         self.ataque_frames = self._cargar_animaciones('%s_ataque_sp.png')
         self.hud = Hud()
+        self.imagen_bala_bruja = recursos.imagen(
+            'assets/characters/enemigos/bola_bruja.png',
+            (24, 24)
+        )
         #endregion
 
         #region Estado de la partida
@@ -495,11 +499,9 @@ class EscenaJuego(Escena):
         for bala in self.balas_bruja:
             x = int(bala['x'] - self.camera['x'])
             y = int(bala['y'] - self.camera['y'])
-            pygame.draw.circle(
-                pantalla,
-                (180, 50, 220),
-                (x, y),
-                8
+            pantalla.blit(
+                self.imagen_bala_bruja,
+                (x - 12, y - 12)
             )
             
     def actualizar_disparo_bruja(self, dt):
