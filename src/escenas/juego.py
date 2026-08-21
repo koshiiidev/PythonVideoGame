@@ -454,6 +454,18 @@ class EscenaJuego(Escena):
             bala['x'] += bala['velocidad_x'] * velocidad_bala * dt
             bala['y'] += bala['velocidad_y'] * velocidad_bala * dt
 
+            #Hitbox de la bala
+            caja_bala = pygame.Rect(
+                bala['x'] - 8,
+                bala['y'] - 8,
+                16,
+                16
+            )
+            
+            if self.colisiona_con_mapa(caja_bala):
+                self.balas_bruja.remove(bala)
+                continue
+
             colision = self.hay_colision_bala(
                 jugador_x,
                 jugador_y,
@@ -484,10 +496,25 @@ class EscenaJuego(Escena):
                 (x, y),
                 8
             )
+            
     def actualizar_disparo_bruja(self, dt):
         if not self.hay_jefe or not self.jefe.vivo:
             return
-        self.t_disparo_bruja += dt
+            
+        #Alcance de la bruja
+        bruja_x, bruja_y = self.jefe.centro
+        jugador_x, jugador_y = self.centro_jugador()
+
+        distancia = math.sqrt(
+            math.pow(jugador_x - bruja_x, 2) +
+            math.pow(jugador_y - bruja_y, 2)
+        )
+        
+        if distancia > 450:
+            self.t_disparo_bruja = 0.0
+            return
+        
+            self.t_disparo_bruja += dt
 
         if self.t_disparo_bruja >= 2.0:
             self.disparar_bruja()
