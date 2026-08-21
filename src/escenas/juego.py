@@ -76,6 +76,7 @@ class EscenaJuego(Escena):
         self.aviso = ''
         self.t_aviso = 0.0
         self.jefe = None              # el enemigo grande del nivel, si lo hay
+        self.balas_bruja = []
         #endregion
 
     #region Carga
@@ -146,6 +147,7 @@ class EscenaJuego(Escena):
         self.enemigos = []
         self.eliminados_nivel = 0
         self.jefe = None
+        self.balas_bruja = []
         self.poblar_enemigos()
         self.invocar_jefe()
 
