@@ -108,8 +108,25 @@ print('   dificultad y vidas fuera de rango rechazadas')
 
 e.set_dificultad('Leyenda')
 e.set_vidas(5)
-chk(e.ajuste_dificultad['enemigos'] == 8, 'ajuste de dificultad mal')
-print('   Leyenda ->', e.ajuste_dificultad)
+chk(e.ajuste_dificultad == ajustes.DIFICULTADES['Leyenda'],
+    'set_dificultad no devolvio el ajuste de Leyenda')
+
+# No se comprueba un numero concreto: esos se van a seguir tocando al balancear.
+# Lo que SI tiene que cumplirse siempre es que cada dificultad sea mas dura que
+# la anterior, y eso es lo que se rompe sin darse cuenta al ajustar valores
+anterior = None
+for nombre in ('Principiante', 'Normal', 'Leyenda'):
+    actual = ajustes.DIFICULTADES[nombre]
+    for clave in ('enemigos', 'velocidad', 'multiplicador'):
+        chk(actual[clave] > 0, 'Leyenda: %s de %s no es positivo' % (clave, nombre))
+        if anterior:
+            chk(actual[clave] >= anterior[clave],
+                '%s tiene menos %s que la dificultad anterior' % (nombre, clave))
+    anterior = actual
+print('   dificultades en orden creciente:',
+      ' < '.join('%s(%d enemigos, vel %d)' % (n, ajustes.DIFICULTADES[n]['enemigos'],
+                                              ajustes.DIFICULTADES[n]['velocidad'])
+                 for n in ('Principiante', 'Normal', 'Leyenda')))
 
 try:
     e.configurar_jugador('  ', ICONO)

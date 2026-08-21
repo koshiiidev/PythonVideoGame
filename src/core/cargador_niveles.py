@@ -58,6 +58,10 @@ class Nivel(object):
         # personajes segun la Y de su base, para poder caminar por detras.
         # Los de ALTOS ya entran solos, esto es para los que miden un tile
         self.profundidad = set(getattr(mod, 'PROFUNDIDAD', ()) or ())
+        # Objetos PLANOS: estan tirados en el suelo, no parados sobre el. Una
+        # alfombra se pisa, asi que se dibuja debajo de todo el mundo y NO entra
+        # al orden por profundidad, aunque mida mas de una casilla
+        self.planos = set(getattr(mod, 'PLANOS', ()) or ())
         # Cosas entre las que se puede pasar a proposito (el cafetal). Se parte
         # de la lista comun y el nivel puede agregar las suyas
         self.atravesables = set(ajustes.ATRAVESABLES) | set(
@@ -92,17 +96,21 @@ class Nivel(object):
 
     def _calcular_bloqueados(self):
         #Convierte las HUELLAS en un conjunto de celdas (col, fil) ocupadas.
-        celdas = set()
+        # Diccionario celda -> letra del objeto que la ocupa, no un conjunto:
+        # asi se puede decir DE QUE es la huella cuando algo sale mal, en vez
+        # de reportar el '.' que hay escrito en el mapa
+        celdas = {}
         for fil in range(self.filas):
             for col in range(len(self.mapa[fil])):
-                huella = self.huellas.get(self.mapa[fil][col])
+                letra = self.mapa[fil][col]
+                huella = self.huellas.get(letra)
                 if not huella:
                     continue
                 ancho, alto = huella
                 izquierda = (ancho - 1) // 2
                 for dx in range(-izquierda, ancho - izquierda):
                     for dy in range(alto):
-                        celdas.add((col + dx, fil - dy))
+                        celdas[(col + dx, fil - dy)] = letra
         return celdas
 
     #region Consultas

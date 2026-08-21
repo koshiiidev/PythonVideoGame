@@ -102,7 +102,7 @@ OBJETOS = {
     'q': 'assets/tiles/arboles/arbol_seco.png',
     'p': 'assets/tiles/arboles/palmera_1.png',
     'T': 'assets/tiles/tile_tronco1.png',
-    'P': 'assets/tiles/tile_puerta.png',
+    'P': 'assets/tiles/puerta_sola.png',
     'C': 'assets/tiles/tile_cafetal.png',
     'R': 'assets/tiles/tile_roca.png',
     'O': 'assets/tiles/tile_barril.png',
@@ -183,7 +183,7 @@ JUGADOR_INICIO = (14, 14)
 MUSICA = 'pueblo.wav'
 
 # Sombras que hay que disipar para que la niebla deje pasar. Hasta lograrlo las SALIDAS no responden
-OBJETIVO = 6
+OBJETIVO = 10
 
 NPCS = [
     {'sprite': 'npc_F_1.png', 'x': 3,  'y': 11, 'solido': True},
@@ -201,5 +201,5 @@ NPCS = [
 # El destino es donde aparece en el otro nivel. Ojo de no dejarlo encima de otra
 # salida, porque entraria en bucle
 SALIDAS = {
-    (6, 20): ('casa', 8, 7),   # la puerta de la casona
+    (6, 20): ('casa', 11, 8),   # la puerta de la casona
 }
