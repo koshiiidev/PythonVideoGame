@@ -437,12 +437,44 @@ class EscenaJuego(Escena):
         }
 
         self.balas_bruja.append(nueva_bala)
+        
+    def hay_colision_bala(self, x_1, y_1, x_2, y_2):
+        distancia = math.sqrt(
+            math.pow(x_2 - x_1, 2) +
+            math.pow(y_2 - y_1, 2)
+        )
+        if distancia < 27:
+            return True
+        else:
+            return False    
 
     def actualizar_balas_bruja(self, dt):
         velocidad_bala = 250
+        jugador_x, jugador_y = self.centro_jugador()
+        
         for bala in self.balas_bruja:
             bala['x'] += bala['velocidad_x'] * velocidad_bala * dt
             bala['y'] += bala['velocidad_y'] * velocidad_bala * dt
+
+            colision = self.hay_colision_bala(
+                jugador_x,
+                jugador_y,
+                bala['x'],
+                bala['y']
+            )
+            
+            if colision:
+                self.balas_bruja.remove(bala)
+                self.recibir_dano()
+                break
+                
+            #Eliminar bala fuera del mapa    
+            if (bala['x'] < 0 or
+                    bala['x'] > self.ancho_mapa or
+                    bala['y'] < 0 or
+                    bala['y'] > self.alto_mapa):
+                        
+                self.balas_bruja.remove(bala)
 
     def dibujar_balas_bruja(self, pantalla):
         for bala in self.balas_bruja:
