@@ -510,7 +510,7 @@ class EscenaJuego(Escena):
             math.pow(jugador_y - bruja_y, 2)
         )
         
-        if distancia > 450:
+        if distancia > 520:
             self.t_disparo_bruja = 0.0
             return
         
