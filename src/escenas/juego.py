@@ -77,6 +77,7 @@ class EscenaJuego(Escena):
         self.t_aviso = 0.0
         self.jefe = None              # el enemigo grande del nivel, si lo hay
         self.balas_bruja = []
+        self.t_disparo_bruja = 0.0
         #endregion
 
     #region Carga
@@ -148,6 +149,7 @@ class EscenaJuego(Escena):
         self.eliminados_nivel = 0
         self.jefe = None
         self.balas_bruja = []
+        self.t_disparo_bruja = 0.0
         self.poblar_enemigos()
         self.invocar_jefe()
 
@@ -227,10 +229,6 @@ class EscenaJuego(Escena):
                 # Se apila: la partida queda congelada debajo, sin perder nada
                 from src.escenas.pausa import EscenaPausa
                 self.gestor.apilar(EscenaPausa(self.gestor, self))
-                
-            elif evento.key == pygame.K_b:
-                self.disparar_bruja()
-                print(self.balas_bruja)
                 
             elif evento.key == pygame.K_g and ajustes.MOSTRAR_DEPURACION:
                 #La rejilla es de depuración si está apagada, la tecla no hace nada
@@ -486,6 +484,14 @@ class EscenaJuego(Escena):
                 (x, y),
                 8
             )
+    def actualizar_disparo_bruja(self, dt):
+        if not self.hay_jefe or not self.jefe.vivo:
+            return
+        self.t_disparo_bruja += dt
+
+        if self.t_disparo_bruja >= 2.0:
+            self.disparar_bruja()
+            self.t_disparo_bruja = 0.0
             
     def invocar_jefe(self):
         #Lo trae el nivel, con su vida y su velocidad propias. Aparece donde el
@@ -575,6 +581,7 @@ class EscenaJuego(Escena):
         self.revisar_salida()
         self.actualizar_enemigos(dt)
         self.actualizar_balas_bruja(dt)
+        self.actualizar_disparo_bruja(dt)
         self.actualizar_camara()
         self.animar(dt)
         self.animar_objetos(dt)
