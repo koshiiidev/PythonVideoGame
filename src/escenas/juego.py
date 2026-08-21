@@ -427,9 +427,10 @@ class EscenaJuego(Escena):
         direccion_x = diferencia_x / distancia
         direccion_y = diferencia_y / distancia
 
+        separacion = 25
         nueva_bala = {
-            'x': bruja_x,
-            'y': bruja_y,
+            'x': bruja_x + direccion_x * separacion,
+            'y': bruja_y + direccion_y * separacion,
             'velocidad_x': direccion_x,
             'velocidad_y': direccion_y
         }
