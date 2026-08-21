@@ -437,7 +437,24 @@ class EscenaJuego(Escena):
         }
 
         self.balas_bruja.append(nueva_bala)
-        
+
+    def actualizar_balas_bruja(self, dt):
+        velocidad_bala = 250
+        for bala in self.balas_bruja:
+            bala['x'] += bala['velocidad_x'] * velocidad_bala * dt
+            bala['y'] += bala['velocidad_y'] * velocidad_bala * dt
+
+    def dibujar_balas_bruja(self, pantalla):
+        for bala in self.balas_bruja:
+            x = int(bala['x'] - self.camera['x'])
+            y = int(bala['y'] - self.camera['y'])
+            pygame.draw.circle(
+                pantalla,
+                (180, 50, 220),
+                (x, y),
+                8
+            )
+            
     def invocar_jefe(self):
         #Lo trae el nivel, con su vida y su velocidad propias. Aparece donde el
         #nivel diga; si no dice nada, en el centro del mapa
@@ -525,6 +542,7 @@ class EscenaJuego(Escena):
         self.mover(dt)
         self.revisar_salida()
         self.actualizar_enemigos(dt)
+        self.actualizar_balas_bruja(dt)
         self.actualizar_camara()
         self.animar(dt)
         self.animar_objetos(dt)
@@ -655,6 +673,7 @@ class EscenaJuego(Escena):
         rango = self.rango_visible()
         self.dibujar_terreno(pantalla, rango)
         self.dibujar_ordenados(pantalla, rango)
+        self.dibujar_balas_bruja(pantalla)
         self.dibujar_rejilla(pantalla, rango)
         self.dibujar_colisiones(pantalla, rango)
 
