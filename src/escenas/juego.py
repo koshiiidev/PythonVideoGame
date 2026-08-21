@@ -445,6 +445,9 @@ class EscenaJuego(Escena):
 
         self.balas_bruja.append(nueva_bala)
         
+        if self.audio:
+            self.audio.sfx('bruja_disparo.wav')
+        
     def hay_colision_bala(self, x_1, y_1, x_2, y_2):
         distancia = math.sqrt(
             math.pow(x_2 - x_1, 2) +
