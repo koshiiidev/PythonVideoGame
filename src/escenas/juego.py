@@ -72,6 +72,7 @@ class EscenaJuego(Escena):
         self.t_invulnerable = 0.0     # mientras sea > 0 no recibe daño
         self.hacia_el_bono = 0        # eliminados desde el ultimo bono
         self.eliminados_nivel = 0     # cuenta para el objetivo del nivel actual
+        self.despejado_avisado = False  # el nivel se despejo y ya se aviso
         self.velocidad_extra = 0.0    # sube con cada bono (requisito 9)
         self.aviso = ''
         self.t_aviso = 0.0
@@ -120,8 +121,11 @@ class EscenaJuego(Escena):
                     self.objeto_grandes[caracter] = pygame.transform.scale(
                         img, (ancho, alto))
                 # Si se desborda de su casilla hay que ordenarlo si o si, o
-                # taparia al jugador estando el jugador mas adelante
-                self.objeto_profundos.add(caracter)
+                # taparia al jugador estando el jugador mas adelante.
+                # Salvo los PLANOS: una alfombra esta TIRADA en el piso, se
+                # pisa, y tiene que quedar debajo de todos
+                if caracter not in self.nivel.planos:
+                    self.objeto_profundos.add(caracter)
                 continue
             anim = Animacion(ruta, lado=ajustes.TILE_W, fps=ajustes.FPS_OBJETO)
             if anim.frames:
@@ -147,6 +151,7 @@ class EscenaJuego(Escena):
         self._cache_rejilla.clear()
         self.enemigos = []
         self.eliminados_nivel = 0
+        self.despejado_avisado = False
         self.jefe = None
         self.balas_bruja = []
         self.t_disparo_bruja = 0.0
@@ -576,13 +581,15 @@ class EscenaJuego(Escena):
 
     def revisar_objetivo(self):
         #Se llama al eliminar un enemigo: avisa cuando el nivel queda despejado
-        if not self.nivel_despejado:
-            return
-        # Solo la primera vez que se cumple, no en cada golpe posterior
-        if self.eliminados_nivel > self.nivel.objetivo:
-            return
+        # Un nivel sin objetivo y sin jefe no tiene nada que despejar
         if self.nivel.objetivo <= 0 and not self.hay_jefe:
             return
+        if not self.nivel_despejado:
+            return
+
+        if self.despejado_avisado:
+            return
+        self.despejado_avisado = True
         if self.nivel.es_final:
             self.ganar()
         else:
@@ -812,6 +819,41 @@ class EscenaJuego(Escena):
                         and adorno not in self.objeto_profundos):
                     pantalla.blit(self.objeto_images[adorno].imagen, (px, py))
 
+                # Objetos PLANOS mas grandes que su casilla (una alfombra):
+                # se apoyan por su base igual que los demas, pero se dibujan
+                # aqui, debajo de los personajes, y no se ordenan
+                for letra in (caracter, adorno):
+                    if letra in self.nivel.planos and letra in self.objeto_grandes:
+                        self._blit_apoyado(pantalla, self.objeto_grandes[letra],
+                                           col, fil)
+
+    def x_apoyado(self, sprite, col):
+        """
+        X en el mundo donde se dibuja un objeto grande.
+
+        Si mide un numero ENTERO de tiles se alinea con la rejilla, con la misma
+        cuenta que usa su HUELLA para saber que casillas ocupa. Centrarlo en la
+        casilla solo cae en la rejilla cuando el ancho es IMPAR: con ancho 2 el
+        dibujo quedaba media casilla corrido respecto de la caja que lo bloquea.
+
+        Si el ancho no es entero (una banca de 1.5 tiles) no hay rejilla posible
+        y se centra, que es lo que se ve mejor.
+        """
+        tw = ajustes.TILE_W
+        ancho = sprite.get_width()
+        if ancho % tw == 0:
+            tiles = ancho // tw
+            return (col - (tiles - 1) // 2) * tw
+        return col * tw + tw // 2 - ancho // 2
+
+    def _blit_apoyado(self, pantalla, sprite, col, fil):
+        #Apoyado en el borde de abajo de su casilla, que es como se coloca todo
+        #lo que mide mas de un tile
+        camara = self.camera
+        base = (fil + 1) * ajustes.TILE_H
+        pantalla.blit(sprite, (self.x_apoyado(sprite, col) - camara['x'],
+                               base - sprite.get_height() - camara['y']))
+
     def dibujar_ordenados(self, pantalla, rango):
         #Personajes y obstáculos altos, ordenados por la Y de sus pies
         col_ini, col_fin, fil_ini, fil_fin = rango
@@ -880,7 +922,7 @@ class EscenaJuego(Escena):
                     elementos.append({
                         'tipo': 'tile',
                         'y_sort': base,
-                        'x': col * ajustes.TILE_W + ajustes.TILE_W // 2 - sprite.get_width() // 2 - camara['x'],
+                        'x': self.x_apoyado(sprite, col) - camara['x'],
                         'y': base - sprite.get_height() - camara['y'],
                         'sprite': sprite,
                         'caracter': caracter,

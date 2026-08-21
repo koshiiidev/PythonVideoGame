@@ -114,11 +114,26 @@ def _cajas(nivel):
                 continue
             caja = geometria.caja_celda(col, fil, *nivel.colision(col, fil))
             if caja.width <= 0 or caja.height <= 0:
-                yield ('COLISIONES: la caja de %r queda vacia'
-                       % nivel.celda(col, fil))
+                yield ('COLISIONES: la caja de %s queda vacia'
+                       % _quien(nivel, col, fil))
             if not (fil * alto <= caja.top and caja.bottom <= (fil + 1) * alto):
-                yield ('COLISIONES: la caja de %r en (%d,%d) se sale de su '
-                       'casilla' % (nivel.celda(col, fil), col, fil))
+                yield ('COLISIONES: la caja de %s en (%d,%d) se sale de su '
+                       'casilla' % (_quien(nivel, col, fil), col, fil))
+
+
+def _dueno(nivel, col, fil):
+    #La letra del objeto que ocupa esa casilla: la suya, o la del objeto grande
+    #cuya huella le cae encima
+    return nivel.bloqueados.get((col, fil)) or nivel.celda(col, fil)
+
+
+def _quien(nivel, col, fil):
+    #Como se nombra lo que estorba en esa casilla. Si es la huella de un objeto
+    #grande se nombra el objeto, porque en el mapa ahi solo hay un punto
+    dueno = nivel.bloqueados.get((col, fil))
+    if dueno and dueno != nivel.celda(col, fil):
+        return 'la huella de %r' % dueno
+    return repr(nivel.celda(col, fil))
 
 
 def _huecos(nivel):
@@ -128,6 +143,10 @@ def _huecos(nivel):
     Al achicar las cajas para que se vieran naturales pueden quedar pasillos:
     si entre las cajas de dos vecinas cabe la caja de pies del jugador, se
     puede colar por ahi.
+
+    Se comparan solo vecinas del MISMO objeto, porque una barrera es una fila
+    de lo mismo: la arboleda del borde, una cerca, las hileras del cafetal. Que
+    entre un estante y un barril quepa una persona no es un error, es una casa.
 
     OJO: esto avisa de CANDIDATOS, no de certezas. Solo mira el par de vecinas,
     no comprueba que se pueda llegar hasta el hueco, asi que si una tercera
@@ -140,8 +159,8 @@ def _huecos(nivel):
         for col in range(nivel.cols):
             if not nivel.es_solido(col, fil):
                 continue
-            letra = nivel.celda(col, fil)
-            if letra in nivel.atravesables:
+            letra = _quien(nivel, col, fil)
+            if nivel.celda(col, fil) in nivel.atravesables:
                 continue
             caja = geometria.caja_celda(col, fil, *nivel.colision(col, fil))
             for dcol, dfil, eje, cabe in ((1, 0, 'horizontal', pies.width),
@@ -150,6 +169,10 @@ def _huecos(nivel):
                 if not (vcol < nivel.cols and vfil < nivel.filas):
                     continue
                 if not nivel.es_solido(vcol, vfil):
+                    continue
+                # Solo cuentan las filas del MISMO objeto: dos cosas distintas
+                # una al lado de la otra no son una barrera
+                if _dueno(nivel, col, fil) != _dueno(nivel, vcol, vfil):
                     continue
                 otra = geometria.caja_celda(vcol, vfil,
                                             *nivel.colision(vcol, vfil))
@@ -161,7 +184,7 @@ def _huecos(nivel):
 
     # Se agrupa por letra y eje: si no, un borde de arboles escupe 50 lineas
     for (letra, eje, hueco, cabe), cuantos in sorted(encontrados.items()):
-        yield ('COLISIONES: entre dos %r seguidos en %s cabe el jugador '
+        yield ('COLISIONES: entre dos %s seguidos en %s cabe el jugador '
                '(hueco de %d px contra %d) en %d sitios. Si algo mas tapa el '
                'paso es falsa alarma; si se pasa a proposito, va en '
                'ATRAVESABLES' % (letra, eje, hueco, cabe, cuantos))

@@ -38,7 +38,7 @@ HITBOX_ALTO = 0.2
 # Con esto en False no se dibujan hitboxes, no aparece la barra de info y la
 # tecla G para mostrar la rejilla deja de funcionar.
 
-MOSTRAR_DEPURACION = True
+MOSTRAR_DEPURACION = False
 
 #endregion
 
@@ -70,9 +70,9 @@ PAQUETE_NIVELES = 'niveles'
 
 #region Partida
 DIFICULTADES = {
-    'Principiante': {'enemigos': 3, 'velocidad': 60,  'dano': 1, 'multiplicador': 1.0},
-    'Normal':       {'enemigos': 5, 'velocidad': 85,  'dano': 1, 'multiplicador': 1.5},
-    'Leyenda':      {'enemigos': 8, 'velocidad': 115, 'dano': 1, 'multiplicador': 2.5},
+    'Principiante': {'enemigos': 5, 'velocidad': 60,  'dano': 1, 'multiplicador': 1.0},
+    'Normal':       {'enemigos': 10, 'velocidad': 85,  'dano': 1, 'multiplicador': 1.5},
+    'Leyenda':      {'enemigos': 20, 'velocidad': 115, 'dano': 1, 'multiplicador': 2.5},
 }
 DIFICULTAD_POR_DEFECTO = 'Normal'
 
@@ -184,7 +184,7 @@ COLISIONES = {
     'a': (0.45, 0.50, 'centro'),   # arbol frutal
     'q': (0.50, 0.45, 'centro'),   # arbol seco
     'p': (0.25, 0.50, 'centro'),   # palmera chiquita
-    'C': (0.55, 0.55),             # cafetal
+    'C': (0.45, 0.55),             # cafetal
     'T': (0.90, 0.40, 'centro'),   # tronco caido
     'R': (0.90, 0.80),             # piedra
 
