@@ -43,7 +43,7 @@ class EscenaJuego(Escena):
         self.hud = Hud()
         self.imagen_bala_bruja = recursos.imagen(
             'assets/characters/enemigos/bola_bruja.png',
-            (24, 24)
+            (40, 40)
         )
         #endregion
 
@@ -504,7 +504,7 @@ class EscenaJuego(Escena):
             y = int(bala['y'] - self.camera['y'])
             pantalla.blit(
                 self.imagen_bala_bruja,
-                (x - 12, y - 12)
+                (x - 20, y - 20)
             )
             
     def actualizar_disparo_bruja(self, dt):
