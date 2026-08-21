@@ -227,6 +227,11 @@ class EscenaJuego(Escena):
                 # Se apila: la partida queda congelada debajo, sin perder nada
                 from src.escenas.pausa import EscenaPausa
                 self.gestor.apilar(EscenaPausa(self.gestor, self))
+                
+            elif evento.key == pygame.K_b:
+                self.disparar_bruja()
+                print(self.balas_bruja)
+                
             elif evento.key == pygame.K_g and ajustes.MOSTRAR_DEPURACION:
                 #La rejilla es de depuración si está apagada, la tecla no hace nada
                 self.estado.mostrar_rejilla = not self.estado.mostrar_rejilla
@@ -402,8 +407,37 @@ class EscenaJuego(Escena):
     #endregion
 
 
-
     #region Jefe
+
+    def disparar_bruja(self):
+        if not self.hay_jefe or not self.jefe.vivo:
+            return
+        # Posición de la bruja
+        bruja_x, bruja_y = self.jefe.centro
+        jugador_x, jugador_y = self.centro_jugador()
+        diferencia_x = jugador_x - bruja_x
+        diferencia_y = jugador_y - bruja_y
+
+        distancia = math.sqrt(
+            math.pow(diferencia_x, 2) +
+            math.pow(diferencia_y, 2)
+        )
+
+        if distancia == 0:
+            return
+
+        direccion_x = diferencia_x / distancia
+        direccion_y = diferencia_y / distancia
+
+        nueva_bala = {
+            'x': bruja_x,
+            'y': bruja_y,
+            'velocidad_x': direccion_x,
+            'velocidad_y': direccion_y
+        }
+
+        self.balas_bruja.append(nueva_bala)
+        
     def invocar_jefe(self):
         #Lo trae el nivel, con su vida y su velocidad propias. Aparece donde el
         #nivel diga; si no dice nada, en el centro del mapa
