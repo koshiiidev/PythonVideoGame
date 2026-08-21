@@ -76,7 +76,7 @@ class EscenaMenu(Escena):
 
     def entrar(self):
         if self.gestor.audio:
-            self.gestor.audio.musica('menu.ogg')
+            self.gestor.audio.musica('menu.wav')
 
     #region Valores que se muestran a la derecha
     def valor_dificultad(self):

@@ -44,7 +44,7 @@ OBJETOS = {
 SOLIDOS = {'M', 'O', 'J'}
 
 JUGADOR_INICIO = (11, 9)
-MUSICA = 'mazmorra.ogg'
+MUSICA = 'mazmorra.wav'
 ENEMIGO = 'sombra'
 OBJETIVO = 5
 

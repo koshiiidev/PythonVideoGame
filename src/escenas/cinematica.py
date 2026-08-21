@@ -43,7 +43,7 @@ CREDITOS = [
     {'texto': 'CHOLITO\nLa Leyenda de la Cangreja', 'duracion': 4.5},
     {'texto': 'Inspirado en leyendas costarricenses:\n'
               'La Segua, El Cadejos y el cerro La Cangreja.', 'duracion': 5.0},
-    {'texto': 'Proyecto final del curso\nDesarrollo de Aplicaciones\nUAM', 'duracion': 4.5},
+    {'texto': 'Proyecto final\nDesarrollo de Aplicaciones de Ult. Gen.\nUAM', 'duracion': 4.5},
     {'texto': 'Gracias por jugar.', 'duracion': 3.5},
 ]
 #endregion
@@ -64,7 +64,7 @@ class EscenaCinematica(Escena):
 
     def entrar(self):
         if self.gestor.audio:
-            self.gestor.audio.musica('intro.ogg')
+            self.gestor.audio.musica('intro.wav')
 
     #region Control
     def manejar_evento(self, evento):

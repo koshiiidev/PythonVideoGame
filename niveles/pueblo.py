@@ -180,7 +180,7 @@ PROFUNDIDAD = {'A', 'a', 'q', 'p', 'R', 'J', 'O', 'C'}
 # Donde arranca el jugador. None = centro del mapa
 JUGADOR_INICIO = (14, 14)
 
-MUSICA = 'pueblo.ogg'
+MUSICA = 'pueblo.wav'
 
 # Sombras que hay que disipar para que la niebla deje pasar. Hasta lograrlo las SALIDAS no responden
 OBJETIVO = 6
