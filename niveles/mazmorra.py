@@ -46,7 +46,7 @@ SOLIDOS = {'M', 'O', 'J'}
 JUGADOR_INICIO = (11, 9)
 MUSICA = 'mazmorra.wav'
 ENEMIGO = 'sombra'
-OBJETIVO = 5
+OBJETIVO = 10
 
 # El jefe del nivel. Se le vence ademas de despejar las sombras.
 # La dificultad elegida multiplica su vida y sus puntos.

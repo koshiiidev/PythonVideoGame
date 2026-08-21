@@ -91,7 +91,7 @@ PLANOS = {'L'}
 
 JUGADOR_INICIO = (11, 8)
 MUSICA = 'casa.ogg'
-OBJETIVO = 3
+OBJETIVO = 10
 ES_FINAL = False
 
 NPCS = [
