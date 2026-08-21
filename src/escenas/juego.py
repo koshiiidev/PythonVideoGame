@@ -515,7 +515,7 @@ class EscenaJuego(Escena):
             self.t_disparo_bruja = 0.0
             return
         
-            self.t_disparo_bruja += dt
+        self.t_disparo_bruja += dt
 
         if self.t_disparo_bruja >= 2.0:
             self.disparar_bruja()
